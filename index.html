@@ -1,0 +1,1516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Exoplanet Habitability Mission Control</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--hud:#00e5ff;--hud2:#00ff9d;--warn:#ff6b35;--danger:#ff2d55;--bg:#020d1a;--panel:#040f1e;--pb:#0a2a40;--text:#a8d8ea;--dim:#4a7a90;--mono:'Share Tech Mono',monospace;--sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;}
+html,body{background:#000;color:#a8d8ea;font-family:var(--mono);font-size:18px;overflow:hidden;height:100%;width:100%;margin:0;padding:0}
+.page{position:fixed;inset:0;width:100vw;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .8s ease}
+.page.active{opacity:1;pointer-events:all}
+.cta-btn{margin-top:32px;padding:15px 50px;font-family:var(--mono);font-size:clamp(13px,1.1vw,17px);letter-spacing:4px;text-transform:uppercase;background:transparent;border:2px solid var(--hud);color:var(--hud);cursor:pointer;border-radius:3px;position:relative;overflow:hidden;transition:all .3s;animation:btnPulse 2.5s ease-in-out infinite}
+.cta-btn::before{content:'';position:absolute;inset:0;background:rgba(0,229,255,.08);transform:scaleX(0);transform-origin:left;transition:transform .3s}
+.cta-btn:hover{color:#fff;border-color:#fff;box-shadow:0 0 30px rgba(0,229,255,.5)}
+.cta-btn:hover::before{transform:scaleX(1)}
+@keyframes btnPulse{0%,100%{box-shadow:0 0 10px rgba(0,229,255,.3)}50%{box-shadow:0 0 25px rgba(0,229,255,.7),0 0 50px rgba(0,229,255,.2)}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes alertFlash{0%,100%{opacity:1}50%{opacity:.2}}
+
+/* PAGE 1 */
+#p1{background:#000;overflow:hidden}
+#p1-canvas{position:absolute;inset:0;width:100%;height:100%}
+.p1-overlay{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.3) 0%,rgba(80,0,0,.25) 50%,rgba(0,0,0,.5) 100%);pointer-events:none}
+.p1-scanline{position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(255,0,0,.03) 3px,rgba(255,0,0,.03) 4px);pointer-events:none}
+.p1-content{position:relative;z-index:10;text-align:center;display:flex;flex-direction:column;align-items:center}
+.p1-alert{font-size:clamp(9px,.8vw,11px);letter-spacing:4px;color:var(--danger);text-transform:uppercase;margin-bottom:16px;animation:alertFlash .8s infinite}
+.p1-title{font-size:clamp(48px,8vw,110px);letter-spacing:8px;color:#fff;text-transform:uppercase;line-height:1;text-shadow:0 0 40px rgba(255,45,85,.8),0 0 80px rgba(255,45,85,.3);animation:shake 4s ease-in-out infinite}
+@keyframes shake{0%,100%{transform:translateX(0)}92%{transform:translateX(0)}93%{transform:translateX(-3px)}94%{transform:translateX(3px)}95%{transform:translateX(-2px)}96%{transform:translateX(0)}}
+.p1-sub{font-size:clamp(12px,1.1vw,16px);letter-spacing:6px;color:rgba(255,100,80,.9);text-transform:uppercase;margin-top:12px;margin-bottom:8px}
+.p1-indicators{display:flex;gap:20px;margin-top:20px;flex-wrap:wrap;justify-content:center}
+  .p1-ind{display:flex;flex-direction:column;align-items:center;padding:10px 16px;border:1px solid rgba(255,45,85,.3);border-radius:3px;background:rgba(255,0,0,.06);min-width:90px}
+  .p1-ind-icon{font-size:20px;height:28px;display:flex;align-items:center;justify-content:center}
+  .p1-ind-label{font-size:9px;letter-spacing:2px;color:var(--danger);text-transform:uppercase;height:24px;display:flex;align-items:center;justify-content:center;text-align:center;margin-top:4px}
+  .p1-ind-val{font-size:11px;letter-spacing:1px;color:#ff8888;animation:alertFlash 1.2s infinite;height:18px;display:flex;align-items:center;justify-content:center;margin-top:3px}
+.p1-btn{border-color:var(--danger);color:var(--danger);animation:dangerPulse 2s infinite}
+.p1-btn:hover{border-color:#fff;color:#fff;box-shadow:0 0 30px rgba(255,45,85,.6)}
+@keyframes dangerPulse{0%,100%{box-shadow:0 0 10px rgba(255,45,85,.4)}50%{box-shadow:0 0 30px rgba(255,45,85,.8),0 0 60px rgba(255,45,85,.2)}}
+.corner-hud{position:absolute;width:60px;height:60px;pointer-events:none;z-index:5}
+.corner-hud.tl{top:16px;left:16px;border-top:2px solid var(--danger);border-left:2px solid var(--danger)}
+.corner-hud.tr{top:16px;right:16px;border-top:2px solid var(--danger);border-right:2px solid var(--danger)}
+.corner-hud.bl{bottom:16px;left:16px;border-bottom:2px solid var(--danger);border-left:2px solid var(--danger)}
+.corner-hud.br{bottom:16px;right:16px;border-bottom:2px solid var(--danger);border-right:2px solid var(--danger)}
+.p1-status{position:absolute;bottom:24px;left:50%;transform:translateX(-50%);font-size:10px;letter-spacing:3px;color:rgba(255,45,85,.5);text-transform:uppercase;z-index:5;white-space:nowrap}
+
+/* PAGE 2 */
+#p2{background:#020d1a;overflow:hidden}
+#p2-canvas{position:absolute;inset:0;width:100%;height:100%}
+.p2-content{position:relative;z-index:10;text-align:center;display:flex;flex-direction:column;align-items:center;max-width:820px;padding:20px}
+.p2-label{font-size:clamp(9px,.8vw,11px);letter-spacing:4px;color:var(--hud);text-transform:uppercase;margin-bottom:14px;opacity:.7}
+.p2-title{font-size:clamp(38px,6vw,84px);letter-spacing:6px;color:#fff;text-transform:uppercase;line-height:1.05;text-shadow:0 0 40px rgba(0,229,255,.5)}
+.p2-sub{font-size:clamp(11px,.9vw,14px);letter-spacing:3px;color:var(--text);text-transform:uppercase;margin-top:14px;line-height:2;opacity:.8}
+.p2-icons{display:flex;gap:18px;margin-top:28px;flex-wrap:wrap;justify-content:center}
+.p2-icon{display:flex;flex-direction:column;align-items:center;gap:7px;padding:14px 18px;border:1px solid rgba(0,229,255,.2);border-radius:4px;background:rgba(0,229,255,.04);cursor:default;transition:all .3s;min-width:82px}
+.p2-icon:hover{border-color:var(--hud);background:rgba(0,229,255,.1);transform:translateY(-4px);box-shadow:0 0 20px rgba(0,229,255,.2)}
+.p2-icon-em{font-size:26px}
+.p2-icon-lbl{font-size:9px;letter-spacing:2px;color:var(--dim);text-transform:uppercase}
+.p2-corner{position:absolute;width:50px;height:50px;pointer-events:none;z-index:5}
+.p2-corner.tl{top:16px;left:16px;border-top:2px solid rgba(0,229,255,.4);border-left:2px solid rgba(0,229,255,.4)}
+.p2-corner.tr{top:16px;right:16px;border-top:2px solid rgba(0,229,255,.4);border-right:2px solid rgba(0,229,255,.4)}
+.p2-corner.bl{bottom:16px;left:16px;border-bottom:2px solid rgba(0,229,255,.4);border-left:2px solid rgba(0,229,255,.4)}
+.p2-corner.br{bottom:16px;right:16px;border-bottom:2px solid rgba(0,229,255,.4);border-right:2px solid rgba(0,229,255,.4)}
+
+/* PAGE 3 */
+#p3{background:#020d1a;overflow:hidden}
+#p3-canvas{position:absolute;inset:0;width:100%;height:100%}
+.p3-content{position:relative;z-index:10;display:flex;flex-direction:column;align-items:center;width:100%;padding:0 24px}
+.p3-title{font-size:clamp(16px,1.8vw,26px);letter-spacing:5px;color:var(--hud);text-transform:uppercase;margin-bottom:18px;text-shadow:0 0 20px rgba(0,229,255,.4)}
+.p3-panels{display:grid;grid-template-columns:1fr .75fr 1fr;gap:12px;width:100%;max-width:1050px}
+.p3-panel{border:1px solid rgba(0,229,255,.2);border-radius:4px;background:rgba(4,15,30,.85);padding:14px 12px;display:flex;flex-direction:column;align-items:center;gap:8px;position:relative;animation:panelGlow 2s ease-in-out infinite}
+@keyframes panelGlow{0%,100%{box-shadow:0 0 10px rgba(0,229,255,.08)}50%{box-shadow:0 0 22px rgba(0,229,255,.25),0 0 0 1px rgba(0,229,255,.15)}}
+.p3-panel:nth-child(2){animation-delay:.5s}
+.p3-panel:nth-child(3){animation-delay:1s}
+.p3-panel-title{font-size:clamp(9px,.8vw,11px);letter-spacing:3px;color:var(--hud);text-transform:uppercase;text-align:center}
+.p3-panel-icons{font-size:16px;letter-spacing:4px;opacity:.7}
+.p3-planet-mini{position:relative;width:72px;height:72px;margin:4px auto}
+.p3-mockctrl{width:100%;display:flex;flex-direction:column;gap:5px}
+.p3-bar{height:5px;border-radius:2px;background:rgba(0,229,255,.12);position:relative;overflow:hidden}
+.p3-bar-fill{height:100%;border-radius:2px;background:var(--hud);animation:barScan 2.5s ease-in-out infinite}
+@keyframes barScan{0%{width:30%}50%{width:75%}100%{width:30%}}
+.p3-bar-fill.b2{animation-delay:.4s;background:var(--hud2)}
+.p3-bar-fill.b3{animation-delay:.8s}
+.p3-bar-fill.b4{animation-delay:1.2s;background:var(--warn)}
+.p3-bar-lbl{font-size:8px;letter-spacing:1px;color:var(--dim);text-transform:uppercase;margin-bottom:1px}
+.p3-diag{width:100%;display:flex;flex-direction:column;gap:5px}
+.p3-diag-row{display:flex;justify-content:space-between;padding:4px 7px;border:1px solid rgba(0,229,255,.1);border-radius:2px;background:rgba(0,0,0,.3)}
+.p3-diag-label{font-size:8px;letter-spacing:1px;color:var(--dim);text-transform:uppercase}
+.p3-diag-val{font-size:9px;color:var(--hud);animation:valFlicker 3s ease-in-out infinite}
+@keyframes valFlicker{0%,100%{opacity:1}50%{opacity:.6}}
+.p3-arrow{position:absolute;font-size:18px;color:var(--hud);z-index:2}
+.p3-arrow.right{right:-20px;top:50%;transform:translateY(-50%);animation:arrowR 1.2s ease-in-out infinite}
+.p3-arrow.left{left:-20px;top:50%;transform:translateY(-50%);animation:arrowL 1.2s ease-in-out infinite}
+@keyframes arrowR{0%,100%{transform:translateY(-50%) translateX(0)}50%{transform:translateY(-50%) translateX(4px)}}
+@keyframes arrowL{0%,100%{transform:translateY(-50%) translateX(0)}50%{transform:translateY(-50%) translateX(-4px)}}
+.p3-warning{display:flex;align-items:center;gap:8px;margin-top:12px;padding:8px 16px;border:1px solid rgba(255,107,53,.3);border-radius:3px;background:rgba(255,107,53,.06)}
+.p3-warning-text{font-size:clamp(9px,.75vw,11px);letter-spacing:2px;color:var(--warn);text-transform:uppercase}
+.p3-warning-icon{font-size:16px;animation:alertFlash 1.5s infinite}
+.p3-instr{font-size:clamp(9px,.75vw,11px);letter-spacing:2px;color:var(--dim);text-transform:uppercase;text-align:center;line-height:2;margin-top:10px}
+.p3-corner{position:absolute;width:50px;height:50px;pointer-events:none;z-index:5}
+.p3-corner.tl{top:16px;left:16px;border-top:2px solid rgba(0,229,255,.4);border-left:2px solid rgba(0,229,255,.4)}
+.p3-corner.tr{top:16px;right:16px;border-top:2px solid rgba(0,229,255,.4);border-right:2px solid rgba(0,229,255,.4)}
+
+/* PAGE 4 — SIMULATION */
+#p4{background:#020d1a;overflow:hidden;flex-direction:column;justify-content:flex-start;width:100vw;height:100vh}
+#p4.active{display:flex !important}
+.sim-hdr{position:relative;overflow:hidden;background:#020d1a;border-bottom:1px solid #0a2a40;padding:10px 24px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;width:100%}
+.sim-hdr canvas{position:absolute;inset:0;pointer-events:none}
+.sim-hdr-left{display:flex;align-items:center;gap:14px;position:relative;z-index:2}
+.sim-hdr-logo{width:40px;height:40px;flex-shrink:0}
+.sim-hdr-title{font-size:clamp(12px,1.3vw,17px);letter-spacing:clamp(2px,.35vw,4px);color:var(--hud);text-transform:uppercase;line-height:1.15}
+.sim-hdr-title span{display:block;font-size:clamp(8px,.65vw,10px);letter-spacing:3px;color:var(--dim);margin-top:2px}
+.sim-hdr-right{position:relative;z-index:2;display:flex;align-items:center;gap:7px}
+.sdot{width:8px;height:8px;border-radius:50%;background:var(--hud2);animation:blink 2s infinite;display:inline-block}
+.stxt{font-size:10px;letter-spacing:2px;color:var(--hud2);text-transform:uppercase}
+.sim-wrap{display:grid;grid-template-columns:1.35fr 1fr 1.35fr;gap:2px;background:#000;flex:1;min-height:0;width:100%}
+@media(max-width:899px){.sim-wrap{grid-template-columns:1fr 1fr}.sim-lp{grid-column:1}.sim-rp{grid-column:2}.sim-mp{grid-column:1/3;min-height:280px}}
+@media(max-width:559px){.sim-wrap{grid-template-columns:1fr}.sim-mp{grid-column:1;min-height:240px}}
+.sim-panel{background:var(--panel);border:1px solid var(--pb);padding:12px;overflow-y:auto}
+.sim-mp{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#020d1a;overflow:hidden;padding:10px}
+.ptitle{font-size:clamp(10px,.8vw,12px);letter-spacing:3px;color:var(--hud);text-transform:uppercase;border-bottom:1px solid var(--pb);padding-bottom:6px;margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.ptitle::before{content:'';width:5px;height:5px;background:var(--hud);border-radius:50%;animation:blink 2s infinite}
+.cg{margin-bottom:11px;padding:9px;background:rgba(0,229,255,.03);border:1px solid rgba(0,229,255,.08);border-radius:4px}
+.cl{font-size:clamp(9px,.76vw,11px);letter-spacing:2px;color:var(--hud);text-transform:uppercase;margin-bottom:3px;display:flex;justify-content:space-between;align-items:baseline}
+.cl span{color:var(--hud2);font-size:clamp(10px,.8vw,12px)}
+input[type=range]{width:100%;height:3px;-webkit-appearance:none;background:linear-gradient(90deg,var(--hud) var(--pct,50%),rgba(0,229,255,.15) var(--pct,50%));border-radius:2px;margin:5px 0;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--hud);cursor:pointer}
+.sr{display:flex;gap:2px;margin-top:3px;flex-wrap:wrap}
+.sb{flex:1;min-width:30px;padding:4px 2px;font-size:clamp(8px,.66vw,10px);font-family:var(--mono);text-transform:uppercase;background:rgba(0,229,255,.04);border:1px solid rgba(0,229,255,.14);color:var(--dim);cursor:default;text-align:center;border-radius:2px;transition:all .15s}
+.sb.on{background:rgba(0,229,255,.18);border-color:var(--hud);color:var(--hud)}
+.str{display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;margin-top:4px}
+.stb{padding:7px 2px;font-size:clamp(8px,.7vw,10px);font-family:var(--mono);text-align:center;cursor:pointer;border-radius:3px;border:1px solid rgba(0,229,255,.14);background:rgba(0,0,0,.3);color:var(--dim);transition:all .15s;line-height:1.5}
+.stb.on{border-color:var(--warn);color:var(--warn);background:rgba(255,107,53,.12)}
+.ag{display:grid;grid-template-columns:1fr 1fr;gap:3px;margin-top:4px}
+.ab{padding:7px 3px;font-size:clamp(8px,.7vw,10px);font-family:var(--mono);text-align:center;cursor:pointer;border:1px solid rgba(0,229,255,.14);background:rgba(0,0,0,.3);color:var(--dim);border-radius:2px;transition:all .15s;line-height:1.5}
+.ab.on{border-color:var(--hud2);color:var(--hud2);background:rgba(0,255,157,.1)}
+.dr{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;padding:6px 8px;background:rgba(0,0,0,.3);border:1px solid var(--pb);border-radius:3px}
+.dn{font-size:clamp(9px,.73vw,11px);letter-spacing:1px;color:var(--dim);text-transform:uppercase}
+.dv{font-size:clamp(11px,.88vw,13px);color:var(--hud);text-align:right}
+.dc{font-size:clamp(8px,.66vw,9px);text-transform:uppercase;letter-spacing:1px;margin-top:1px;text-align:right}
+.bw{height:3px;background:rgba(255,255,255,.06);border-radius:2px;margin-top:3px;overflow:hidden;width:75px}
+.bf{height:100%;border-radius:2px;transition:width .5s,background .5s}
+.go{margin-bottom:11px}
+.gl{font-size:clamp(9px,.73vw,11px);letter-spacing:2px;color:var(--hud);text-transform:uppercase;margin-bottom:4px;display:flex;justify-content:space-between;align-items:center}
+.gb{height:15px;background:rgba(0,0,0,.4);border:1px solid rgba(0,229,255,.14);border-radius:3px;overflow:hidden}
+.gf{height:100%;transition:width .6s,background .6s;position:relative}
+.gf::after{content:'';position:absolute;right:0;top:0;bottom:0;width:2px;background:rgba(255,255,255,.5)}
+.gs{font-size:clamp(18px,1.55vw,23px);font-weight:bold;text-align:center;margin:3px 0 1px}
+.gc{font-size:clamp(9px,.73vw,11px);letter-spacing:2px;text-transform:uppercase;text-align:center}
+.sep{border:none;border-top:1px solid rgba(0,229,255,.1);margin:9px 0}
+canvas#sf{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.scanline-mid{position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,20,40,.05) 2px,rgba(0,20,40,.05) 4px);pointer-events:none;z-index:1}
+canvas#pl{display:block;position:relative;z-index:2}
+.pc{position:relative;display:flex;align-items:center;justify-content:center;z-index:2}
+.or{position:absolute;border-radius:50%;border:1px solid rgba(0,229,255,.1);pointer-events:none;animation:op 4s ease-in-out infinite}
+@keyframes op{0%,100%{opacity:.35;transform:scale(1)}50%{opacity:.75;transform:scale(1.01)}}
+.mt{font-size:clamp(9px,.73vw,11px);letter-spacing:4px;color:var(--hud);text-transform:uppercase;margin-bottom:6px;z-index:3;position:relative}
+.mi{font-size:clamp(9px,.73vw,11px);color:var(--dim);z-index:3;position:relative;margin-top:5px;letter-spacing:1px;text-align:center}
+.ha{position:absolute;top:8px;right:8px;background:rgba(255,45,85,.15);border:1px solid var(--danger);color:var(--danger);padding:3px 8px;font-size:clamp(9px,.68vw,10px);letter-spacing:2px;border-radius:3px;z-index:10;animation:fa 1s infinite;display:none}
+@keyframes fa{0%,100%{opacity:1}50%{opacity:.25}}
+::-webkit-scrollbar{width:3px;background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(0,229,255,.18);border-radius:2px}
+</style>
+</head>
+<body>
+
+<!-- PAGE 1 -->
+<div class="page active" id="p1">
+  <canvas id="p1-canvas"></canvas>
+  <div class="p1-overlay"></div>
+  <div class="p1-scanline"></div>
+  <div class="corner-hud tl"></div><div class="corner-hud tr"></div>
+  <div class="corner-hud bl"></div><div class="corner-hud br"></div>
+  <div class="p1-content">
+    <div class="p1-alert">⚠ GLOBAL EMERGENCY ALERT — SYSTEM CRITICAL ⚠</div>
+    <div class="p1-title">EARTH<br>IS FAILING</div>
+    <div class="p1-sub">Human survival at risk.</div>
+    <div class="p1-indicators">
+      <div class="p1-ind"><div class="p1-ind-icon">🌡</div><div class="p1-ind-label">Temperature</div><div class="p1-ind-val">+4.8°C</div></div>
+      <div class="p1-ind"><div class="p1-ind-icon">☢</div><div class="p1-ind-label">Radiation</div><div class="p1-ind-val">CRITICAL</div></div>
+      <div class="p1-ind"><div class="p1-ind-icon">💧</div><div class="p1-ind-label">Water</div><div class="p1-ind-val">SCARCE</div></div>
+      <div class="p1-ind"><div class="p1-ind-icon">🌫</div><div class="p1-ind-label">Atmosphere</div><div class="p1-ind-val">TOXIC</div></div>
+      <div class="p1-ind"><div class="p1-ind-icon">👥</div><div class="p1-ind-label">Population</div><div class="p1-ind-val">FAILING</div></div>
+    </div>
+    <button class="cta-btn p1-btn" onclick="goTo(2)">BEGIN MISSION</button>
+  </div>
+  <div class="p1-status">MISSION CONTROL — PRIORITY ALPHA — AWAITING AUTHORIZATION</div>
+</div>
+
+<!-- PAGE 2 -->
+<div class="page" id="p2">
+  <canvas id="p2-canvas"></canvas>
+  <div class="p2-corner tl"></div><div class="p2-corner tr"></div>
+  <div class="p2-corner bl"></div><div class="p2-corner br"></div>
+  <div class="p2-content">
+    <div class="p2-label">— Mission Briefing — Stardate 2147.3 —</div>
+    <div class="p2-title">FIND A<br>NEW WORLD</div>
+    <div class="p2-sub">Analyze planets.&nbsp;&nbsp;Optimize survival.<br>Build humanity's future.</div>
+    <div class="p2-icons">
+      <div class="p2-icon"><div class="p2-icon-em">🌡</div><div class="p2-icon-lbl">Temperature</div></div>
+      <div class="p2-icon"><div class="p2-icon-em">🌍</div><div class="p2-icon-lbl">Gravity</div></div>
+      <div class="p2-icon"><div class="p2-icon-em">🌫</div><div class="p2-icon-lbl">Atmosphere</div></div>
+      <div class="p2-icon"><div class="p2-icon-em">☢</div><div class="p2-icon-lbl">Radiation</div></div>
+      <div class="p2-icon"><div class="p2-icon-em">💧</div><div class="p2-icon-lbl">Water</div></div>
+    </div>
+    <button class="cta-btn" onclick="goTo(3)">ACCEPT MISSION</button>
+  </div>
+</div>
+
+<!-- PAGE 3 -->
+<div class="page" id="p3">
+  <canvas id="p3-canvas"></canvas>
+  <div class="p3-corner tl"></div><div class="p3-corner tr"></div>
+  <div class="p3-content">
+    <div class="p3-title">Simulation Training</div>
+    <div class="p3-panels">
+      <div class="p3-panel">
+        <div class="p3-arrow right">▶</div>
+        <div class="p3-panel-title">⭐ Configure Planet</div>
+        <div class="p3-panel-icons">🌍 🌫 💧 🧲</div>
+        <div class="p3-mockctrl">
+          <div class="p3-bar-lbl">Star Type</div><div class="p3-bar"><div class="p3-bar-fill" style="width:55%"></div></div>
+          <div class="p3-bar-lbl">Distance</div><div class="p3-bar"><div class="p3-bar-fill b2" style="width:40%"></div></div>
+          <div class="p3-bar-lbl">Atmosphere</div><div class="p3-bar"><div class="p3-bar-fill b3" style="width:70%"></div></div>
+          <div class="p3-bar-lbl">Mag. Field</div><div class="p3-bar"><div class="p3-bar-fill b4" style="width:30%"></div></div>
+          <div class="p3-bar-lbl">Water</div><div class="p3-bar"><div class="p3-bar-fill b2" style="width:60%"></div></div>
+        </div>
+      </div>
+      <div class="p3-panel">
+        <div class="p3-panel-title">🪐 Live Simulation</div>
+        <div class="p3-planet-mini"><canvas id="p3-planet" width="72" height="72"></canvas></div>
+        <div style="font-size:9px;letter-spacing:2px;color:var(--dim);text-align:center;text-transform:uppercase">Rotating Planet</div>
+        <div style="font-size:8px;letter-spacing:1px;color:rgba(0,229,255,.4);text-align:center;margin-top:4px">Visual updates in real time</div>
+      </div>
+      <div class="p3-panel">
+        <div class="p3-arrow left">◀</div>
+        <div class="p3-panel-title">📊 Survival Analysis</div>
+        <div class="p3-panel-icons">🌡 ☢ 💧 👨‍🚀 🏠</div>
+        <div class="p3-diag">
+          <div class="p3-diag-row"><span class="p3-diag-label">Temp</span><span class="p3-diag-val">— °F</span></div>
+          <div class="p3-diag-row"><span class="p3-diag-label">Gravity</span><span class="p3-diag-val">— m/s²</span></div>
+          <div class="p3-diag-row"><span class="p3-diag-label">Radiation</span><span class="p3-diag-val">—/100</span></div>
+          <div class="p3-diag-row"><span class="p3-diag-label">Human Survivability</span><span class="p3-diag-val" style="color:var(--hud2)">—/100</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="p3-instr">Adjust planetary conditions.&nbsp;&nbsp;Maximize survivability.&nbsp;&nbsp;Minimize colony difficulty.</div>
+    <div class="p3-warning">
+      <span class="p3-warning-icon">⚠</span>
+      <span class="p3-warning-text">Every choice changes the planet.</span>
+    </div>
+    <button class="cta-btn" onclick="goTo(4)" style="margin-top:16px">ENTER SIMULATION</button>
+  </div>
+</div>
+
+<!-- PAGE 4 -->
+<div class="page" id="p4" style="display:none">
+  <div class="sim-hdr" id="shdr">
+    <canvas id="shc"></canvas>
+    <div class="sim-hdr-left">
+      <svg class="sim-hdr-logo" viewBox="0 0 38 38" fill="none">
+        <circle cx="19" cy="19" r="18" stroke="rgba(0,229,255,0.15)" stroke-width="1"/>
+        <circle cx="19" cy="19" r="12" stroke="rgba(0,229,255,0.12)" stroke-width="0.8" stroke-dasharray="2 3"/>
+        <circle cx="19" cy="19" r="6" stroke="rgba(0,229,255,0.18)" stroke-width="0.8" stroke-dasharray="1.5 2"/>
+        <circle cx="19" cy="19" r="3" fill="#ffe066" opacity="0.9"/>
+        <circle cx="19" cy="19" r="4.5" fill="rgba(255,224,100,0.15)"/>
+        <circle cx="19" cy="1" r="2.2" fill="#00e5ff" opacity="0.85"/>
+        <circle cx="31" cy="19" r="1.5" fill="#00ff9d" opacity="0.8"/>
+        <circle cx="24.5" cy="13.5" r="0.9" fill="#a8d8ea" opacity="0.6"/>
+      </svg>
+      <div><div class="sim-hdr-title">Exoplanet Habitability Mission Control<span>Planetary Systems Simulation — Stellar Habitability Analysis</span></div></div>
+    </div>
+    <div class="sim-hdr-right"><span class="sdot"></span><span class="stxt">Live</span></div>
+  </div>
+  <div class="sim-wrap">
+    <div class="sim-panel sim-lp">
+      <div class="ptitle">Planetary Configuration</div>
+      <div class="cg"><div class="cl">Star Type</div><div class="str"><div class="stb on" id="sc" onclick="setStar('cool')">&#11044; Cool<br><span style="font-size:.75em;color:#888;font-family:var(--sans);letter-spacing:0">K/M-type</span></div><div class="stb" id="ss" onclick="setStar('sun')">&#11044; Medium<br><span style="font-size:.75em;color:#888;font-family:var(--sans);letter-spacing:0">G-type</span></div><div class="stb" id="sh" onclick="setStar('hot')">&#11044; Hot<br><span style="font-size:.75em;color:#888;font-family:var(--sans);letter-spacing:0">A/F-type</span></div></div></div>
+      <div class="cg"><div class="cl">Distance From Star <span id="dv">0.1 AU</span></div><input type="range" id="ds" min="1" max="50" value="1" step="1" oninput="updateDist(this)"><div class="sr"><div class="sb on" id="d0">Very Close</div><div class="sb" id="d1">Close</div><div class="sb" id="d2">Moderate</div><div class="sb" id="d3">Far</div><div class="sb" id="d4">Very Far</div></div></div>
+      <div class="cg"><div class="cl">Planet Mass <span id="mv">6.0×10²³ kg</span></div><input type="range" id="ms" min="0" max="100" value="0" step="1" oninput="updateMass(this)"><div class="sr"><div class="sb on" id="m0">Small</div><div class="sb" id="m1">Medium</div><div class="sb" id="m2">Large</div></div></div>
+      <div class="cg"><div class="cl">Planet Radius <span id="rv">3,000 km</span></div><input type="range" id="rs" min="0" max="100" value="0" step="1" oninput="updateRad(this)"><div class="sr"><div class="sb on" id="r0">Small</div><div class="sb" id="r1">Medium</div><div class="sb" id="r2">Large</div></div></div>
+      <div class="cg"><div class="cl">Magnetic Field <span id="mgv">0 µT</span></div><input type="range" id="mgs" min="0" max="200" value="0" step="1" oninput="updateMag(this)"><div class="sr"><div class="sb on" id="mg0">Weak</div><div class="sb" id="mg1">Moderate</div><div class="sb" id="mg2">Strong</div></div></div>
+      <div class="cg"><div class="cl">Atmosphere</div><div class="ag"><div class="ab" id="aO2" onclick="setAtm('O2')">O&#8322;-Rich<br><span style="font-size:.78em;font-family:var(--sans);letter-spacing:0">Breathable</span></div><div class="ab" id="aCO2" onclick="setAtm('CO2')">CO&#8322;-Rich<br><span style="font-size:.78em;font-family:var(--sans);letter-spacing:0">Greenhouse</span></div><div class="ab" id="aCH4" onclick="setAtm('CH4')">CH&#8324;-Rich<br><span style="font-size:.78em;font-family:var(--sans);letter-spacing:0">Methane</span></div><div class="ab on" id="aSO2" onclick="setAtm('SO2')">SO&#8322;-Rich<br><span style="font-size:.78em;font-family:var(--sans);letter-spacing:0">Volcanic</span></div></div></div>
+      <div class="cg"><div class="cl">Water Amount <span id="wv">0%</span></div><input type="range" id="ws" min="0" max="100" value="0" step="1" oninput="updateWater(this)"><div class="sr"><div class="sb on" id="w0">None</div><div class="sb" id="w1">Low</div><div class="sb" id="w2">Moderate</div><div class="sb" id="w3">High</div></div></div>
+    </div>
+    <div class="sim-mp">
+      <canvas id="sf"></canvas>
+      <div class="scanline-mid"></div>
+      <div class="mt">Planet Simulation</div>
+      <div class="pc" id="pw"><div class="or" id="o1"></div><div class="or" id="o2" style="animation-delay:.8s;opacity:.22"></div><canvas id="pl"></canvas></div>
+      <div class="mi" id="pst">SCANNING PLANETARY BODY...</div>
+      <div class="ha" id="hal">&#9888; HAZARD DETECTED</div>
+    </div>
+    <div class="sim-panel sim-rp">
+      <div class="ptitle">Environmental Diagnostics</div>
+      <div class="dr"><div><div class="dn">Surface Temperature</div><div class="bw"><div class="bf" id="tb"></div></div></div><div><div class="dv" id="tv">--</div><div class="dc" id="tc"></div></div></div>
+      <div class="dr"><div><div class="dn">Gravity</div><div class="bw"><div class="bf" id="gb2"></div></div></div><div><div class="dv" id="gv">--</div><div class="dc" id="gc2"></div></div></div>
+      <div class="dr"><div><div class="dn">Atmospheric Pressure</div><div class="bw"><div class="bf" id="pb2"></div></div></div><div><div class="dv" id="pv">--</div><div class="dc" id="pc2"></div></div></div>
+      <div class="dr"><div><div class="dn">Radiation Risk</div><div class="bw"><div class="bf" id="rb"></div></div></div><div><div class="dv" id="rva">--</div><div class="dc" id="rc"></div></div></div>
+      <div class="dr"><div><div class="dn">Water Availability</div><div class="bw"><div class="bf" id="wab"></div></div></div><div><div class="dv" id="wav">--</div></div></div>
+      <div class="dr" id="ghrow" style="display:none;border-color:rgba(255,107,53,.4);background:rgba(255,107,53,.06)"><div><div class="dn" style="color:var(--warn)">⚠ Greenhouse Effect</div></div><div><div class="dv" id="ghval" style="color:var(--warn)">--</div><div class="dc" id="ghcat" style="color:var(--warn)"></div></div></div>
+      <div class="dr" id="breath-row"><div><div class="dn">Breathability</div></div><div><div class="dv" id="breath-score">--</div><div class="dc" id="breath-cat"></div><div style="font-size:clamp(10px,.72vw,12px);font-family:var(--sans);color:var(--dim);margin-top:3px;text-align:right;max-width:140px;line-height:1.5" id="breath-note"></div></div></div>
+      <hr class="sep">
+      <div class="ptitle" style="margin-bottom:10px">Colony Assessment</div>
+      <div class="go">
+        <div class="gl">Human Survivability <span id="sbadge" style="font-size:.65em;padding:2px 5px;border-radius:2px;color:#00ff9d;background:rgba(0,255,157,.12)">--</span></div>
+        <div class="gb"><div class="gf" id="sbar" style="width:0%"></div></div>
+        <div class="gs" id="sscore" style="color:#00ff9d">--</div>
+        <div class="gc" id="scat" style="color:#00ff9d">--</div>
+      </div>
+      <div class="go">
+        <div class="gl">Colony Difficulty <span id="dbadge" style="font-size:.65em;padding:2px 5px;border-radius:2px;color:#ff6b35;background:rgba(255,107,53,.12)">--</span></div>
+        <div class="gb"><div class="gf" id="dbar" style="width:0%"></div></div>
+        <div class="gs" id="dscore" style="color:#ff6b35">--</div>
+        <div class="gc" id="dcat" style="color:#ff6b35">--</div>
+      </div>
+      <div style="margin-top:8px;margin-bottom:4px;font-size:clamp(8px,.68vw,10px);letter-spacing:2px;color:var(--dim);text-transform:uppercase">Colony Design Requirements</div>
+      <div id="checklist" style="display:flex;flex-direction:column;gap:3px;margin-bottom:6px"></div>
+      <div id="wbox" style="margin-top:8px"></div>
+      <button onclick="deployColony()" style="width:100%;margin-top:14px;padding:12px 8px;font-family:var(--mono);font-size:clamp(10px,.85vw,13px);letter-spacing:3px;text-transform:uppercase;background:transparent;border:2px solid var(--hud2);color:var(--hud2);cursor:pointer;border-radius:3px;transition:all .3s;animation:deployPulse 2.5s ease-in-out infinite" onmouseover="this.style.background='rgba(0,255,157,.12)';this.style.color='#fff';this.style.borderColor='#fff'" onmouseout="this.style.background='transparent';this.style.color='var(--hud2)';this.style.borderColor='var(--hud2)'">🚀 DEPLOY COLONY</button>
+      <style>@keyframes deployPulse{0%,100%{box-shadow:0 0 8px rgba(0,255,157,.3)}50%{box-shadow:0 0 20px rgba(0,255,157,.7),0 0 40px rgba(0,255,157,.15)}}</style>
+    </div>
+  </div>
+</div>
+
+<!-- DEPLOY MODAL — handles both hard block (Hazardous/Unsurvivable) and soft warning (Challenging) -->
+<div id="deploy-modal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);align-items:center;justify-content:center" onclick="if(event.target===this)closeModal()">
+  <div id="deploy-modal-inner" style="background:#040f1e;border-radius:6px;max-width:500px;width:90%;padding:32px;position:relative">
+    <div id="modal-top-bar" style="position:absolute;top:0;left:0;right:0;height:3px;border-radius:6px 6px 0 0"></div>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+      <span id="modal-icon" style="font-size:28px"></span>
+      <div>
+        <div id="modal-header-label" style="font-size:clamp(10px,.9vw,13px);letter-spacing:3px;text-transform:uppercase;font-family:var(--mono)"></div>
+        <div id="modal-header-title" style="font-size:clamp(14px,1.2vw,18px);color:#fff;font-family:var(--mono);letter-spacing:1px;margin-top:3px"></div>
+      </div>
+    </div>
+    <p style="font-family:var(--sans);font-size:clamp(12px,.95vw,15px);color:#a8d8ea;line-height:1.75;margin-bottom:8px">This planet scores <span id="modal-surv-score" style="font-family:var(--mono);font-weight:bold">--</span> — rated <span id="modal-surv-cat" style="font-family:var(--mono);font-weight:bold">--</span>.</p>
+    <p id="modal-body-text" style="font-family:var(--sans);font-size:clamp(12px,.95vw,15px);color:#a8d8ea;line-height:1.75;margin-bottom:8px"></p>
+    <p id="modal-gap-text" style="font-family:var(--sans);font-size:clamp(12px,.95vw,15px);line-height:1.75;margin-bottom:24px"></p>
+    <div id="modal-buttons" style="display:flex;gap:10px"></div>
+  </div>
+</div>
+
+<script>
+function goTo(n){
+  document.querySelectorAll('.page').forEach(p=>{
+    p.classList.remove('active');
+    if(p.id==='p4'||p.id==='p5') p.style.display='none';
+  });
+  const t=document.getElementById('p'+n);
+  if(n===4){t.style.display='flex';setTimeout(()=>{t.classList.add('active');setTimeout(initSim,120);},20);}
+  else if(n===5){t.style.display='flex';setTimeout(()=>{t.classList.add('active');},20);}
+  else{t.classList.add('active');}
+}
+
+/* PAGE 1 CANVAS */
+(function(){
+  const cv=document.getElementById('p1-canvas');
+  const resize=()=>{cv.width=window.innerWidth;cv.height=window.innerHeight;};
+  resize();window.addEventListener('resize',resize);
+  const ctx=cv.getContext('2d');
+  const stars=Array.from({length:120},()=>({x:Math.random()*cv.width,y:Math.random()*cv.height,r:Math.random()*1.2+.2,t:Math.random()*Math.PI*2,sp:Math.random()*.05+.01}));
+  const debris=Array.from({length:16},()=>({x:Math.random()*cv.width,y:Math.random()*cv.height,vx:(Math.random()-.5)*.4,vy:(Math.random()-.5)*.4,len:Math.random()*20+8,angle:Math.random()*Math.PI*2}));
+  const fires=Array.from({length:28},()=>({x:Math.random()*window.innerWidth,y:window.innerHeight*.5+Math.random()*window.innerHeight*.4,vx:(Math.random()-.5)*.5,vy:-(Math.random()*.8+.2),life:Math.random(),mL:Math.random()*.5+.3,r:Math.random()*4+2}));
+  let t=0;
+  (function draw(){
+    cv.width=window.innerWidth;cv.height=window.innerHeight;t+=.012;
+    ctx.clearRect(0,0,cv.width,cv.height);
+    const bg=ctx.createRadialGradient(cv.width/2,cv.height/2,0,cv.width/2,cv.height/2,cv.height);
+    bg.addColorStop(0,'#0a0005');bg.addColorStop(.5,'#050008');bg.addColorStop(1,'#000');
+    ctx.fillStyle=bg;ctx.fillRect(0,0,cv.width,cv.height);
+    stars.forEach(s=>{s.t+=s.sp*.03;ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fillStyle='rgba(200,180,255,'+(.2+.4*Math.abs(Math.sin(s.t)))+')';ctx.fill();});
+    const ex=cv.width/2,ey=cv.height*.47,er=Math.min(cv.width,cv.height)*.27;
+    const eg=ctx.createRadialGradient(ex,ey,er*.5,ex,ey,er*1.6);
+    eg.addColorStop(0,'rgba(200,30,10,.18)');eg.addColorStop(.5,'rgba(180,20,0,.1)');eg.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=eg;ctx.beginPath();ctx.arc(ex,ey,er*1.6,0,Math.PI*2);ctx.fill();
+    const ep=ctx.createRadialGradient(ex-er*.3,ey-er*.3,er*.1,ex,ey,er);
+    ep.addColorStop(0,'#1a0a00');ep.addColorStop(.3,'#3d0800');ep.addColorStop(.7,'#1a0500');ep.addColorStop(1,'#0a0000');
+    ctx.beginPath();ctx.arc(ex,ey,er,0,Math.PI*2);ctx.fillStyle=ep;ctx.fill();
+    const fo=ctx.createRadialGradient(ex,ey+er*.1,0,ex,ey,er);
+    fo.addColorStop(0,'rgba(255,60,0,.25)');fo.addColorStop(.4,'rgba(220,30,0,.15)');fo.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.beginPath();ctx.arc(ex,ey,er,0,Math.PI*2);ctx.fillStyle=fo;ctx.fill();
+    ctx.save();ctx.beginPath();ctx.arc(ex,ey,er,0,Math.PI*2);ctx.clip();
+    for(let i=0;i<5;i++){const oy=ey-er+er*i*.45+Math.sin(t+i)*(er*.04);ctx.beginPath();ctx.ellipse(ex,oy,er,er*.06,0,0,Math.PI*2);ctx.fillStyle='rgba(80,10,0,'+(.15+Math.sin(t*.5+i)*.05)+')';ctx.fill();}
+    const ah=ctx.createRadialGradient(ex,ey,er*.92,ex,ey,er);
+    ah.addColorStop(0,'rgba(0,0,0,0)');ah.addColorStop(.5,'rgba(200,60,0,.18)');ah.addColorStop(1,'rgba(150,20,0,.4)');
+    ctx.beginPath();ctx.arc(ex,ey,er,0,Math.PI*2);ctx.fillStyle=ah;ctx.fill();
+    ctx.restore();
+    if(Math.sin(t*7)>.85){
+      ctx.save();ctx.beginPath();ctx.arc(ex,ey,er,0,Math.PI*2);ctx.clip();
+      ctx.strokeStyle='rgba(255,180,50,'+(.4+Math.random()*.3)+')';ctx.lineWidth=1.5;
+      ctx.beginPath();let lx=ex-er*.2,ly=ey-er*.3;ctx.moveTo(lx,ly);
+      for(let i=0;i<6;i++){lx+=(Math.random()-.4)*er*.15;ly+=er*.1;ctx.lineTo(lx,ly);}
+      ctx.stroke();ctx.restore();
+    }
+    const ar=ctx.createRadialGradient(ex,ey,er,ex,ey,er*1.08);
+    ar.addColorStop(0,'rgba(220,80,0,.35)');ar.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.beginPath();ctx.arc(ex,ey,er*1.08,0,Math.PI*2);ctx.fillStyle=ar;ctx.fill();
+    debris.forEach(d=>{d.x+=d.vx;d.y+=d.vy;if(d.x<0)d.x=cv.width;if(d.x>cv.width)d.x=0;if(d.y<0)d.y=cv.height;if(d.y>cv.height)d.y=0;ctx.save();ctx.translate(d.x,d.y);ctx.rotate(d.angle+t*.5);ctx.strokeStyle='rgba(180,120,60,.5)';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(-d.len/2,0);ctx.lineTo(d.len/2,0);ctx.stroke();ctx.restore();});
+    fires.forEach(f=>{f.life+=.008;if(f.life>f.mL){f.life=0;f.x=Math.random()*cv.width;f.y=cv.height*.5+Math.random()*cv.height*.4;}const a=1-f.life/f.mL;ctx.beginPath();ctx.arc(f.x+f.vx*f.life*60,f.y+f.vy*f.life*60,f.r*(1-f.life/f.mL*.5),0,Math.PI*2);ctx.fillStyle='rgba(255,'+(Math.round(80+a*120))+',0,'+(a*.6)+')';ctx.fill();});
+    const scanY=((t*.08)%1)*cv.height;
+    ctx.fillStyle='rgba(255,0,0,.04)';ctx.fillRect(0,scanY,cv.width,3);
+    if(Math.sin(t*2.5)>.7)ctx.fillStyle='rgba(255,0,0,'+((Math.sin(t*2.5)-.7)*.08)+')';ctx.fillRect(0,0,cv.width,cv.height);
+    requestAnimationFrame(draw);
+  })();
+})();
+
+/* PAGE 2 CANVAS */
+(function(){
+  const cv=document.getElementById('p2-canvas');
+  const resize=()=>{cv.width=window.innerWidth;cv.height=window.innerHeight;};
+  resize();window.addEventListener('resize',resize);
+  const ctx=cv.getContext('2d');
+  const stars=Array.from({length:160},()=>({x:Math.random()*cv.width,y:Math.random()*cv.height,r:Math.random()*1.3+.2,t:Math.random()*Math.PI*2,sp:Math.random()*.06+.01}));
+  const hplanets=[{x:.18,y:.28,r:.055,col:'#00e5ff',sp:.008,_a:0},{x:.8,y:.68,r:.038,col:'#00ff9d',sp:.013,_a:1},{x:.62,y:.18,r:.022,col:'#ff6b35',sp:.019,_a:2}];
+  let t=0;
+  (function draw(){
+    cv.width=window.innerWidth;cv.height=window.innerHeight;t+=.01;
+    ctx.clearRect(0,0,cv.width,cv.height);
+    const bg=ctx.createRadialGradient(cv.width/2,cv.height/2,0,cv.width/2,cv.height/2,cv.height*.8);
+    bg.addColorStop(0,'#030e1f');bg.addColorStop(1,'#010810');
+    ctx.fillStyle=bg;ctx.fillRect(0,0,cv.width,cv.height);
+    ctx.strokeStyle='rgba(0,100,140,.1)';ctx.lineWidth=.8;
+    for(let i=0;i<9;i++){ctx.beginPath();ctx.moveTo(i/8*cv.width,0);ctx.lineTo(i/8*cv.width,cv.height);ctx.stroke();ctx.beginPath();ctx.moveTo(0,i/8*cv.height);ctx.lineTo(cv.width,i/8*cv.height);ctx.stroke();}
+    stars.forEach(s=>{s.t+=s.sp*.03;ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fillStyle='rgba(180,220,255,'+(.15+.4*Math.abs(Math.sin(s.t)))+')';ctx.fill();});
+    ctx.save();ctx.translate(cv.width*.14,cv.height*.78);
+    const sw=t%(Math.PI*2);
+    ctx.beginPath();ctx.moveTo(0,0);ctx.arc(0,0,110,sw,sw+.8);ctx.fillStyle='rgba(0,229,255,.06)';ctx.fill();
+    ctx.beginPath();ctx.arc(0,0,110,0,Math.PI*2);ctx.strokeStyle='rgba(0,229,255,.14)';ctx.lineWidth=1;ctx.stroke();
+    ctx.beginPath();ctx.arc(0,0,70,0,Math.PI*2);ctx.strokeStyle='rgba(0,229,255,.09)';ctx.lineWidth=.8;ctx.stroke();
+    ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(Math.cos(sw)*110,Math.sin(sw)*110);ctx.strokeStyle='rgba(0,229,255,.5)';ctx.lineWidth=1.5;ctx.stroke();
+    ctx.restore();
+    hplanets.forEach(p=>{
+      p._a+=p.sp;
+      const px=p.x*cv.width,py=p.y*cv.height,pr=p.r*Math.min(cv.width,cv.height);
+      const glow=ctx.createRadialGradient(px,py,pr*.3,px,py,pr*1.5);
+      glow.addColorStop(0,p.col+'44');glow.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=glow;ctx.beginPath();ctx.arc(px,py,pr*1.5,0,Math.PI*2);ctx.fill();
+      const grad=ctx.createRadialGradient(px-pr*.3,py-pr*.3,pr*.1,px,py,pr);
+      grad.addColorStop(0,p.col+'cc');grad.addColorStop(1,p.col+'33');
+      ctx.beginPath();ctx.arc(px,py,pr,0,Math.PI*2);ctx.fillStyle=grad;ctx.fill();
+      ctx.beginPath();ctx.ellipse(px,py,pr*2.2,pr*.55,p._a,0,Math.PI*2);ctx.strokeStyle=p.col+'28';ctx.lineWidth=1;ctx.stroke();
+      const mx=px+Math.cos(p._a*3)*pr*2.2,my=py+Math.sin(p._a*3)*pr*.55;
+      ctx.beginPath();ctx.arc(mx,my,pr*.17,0,Math.PI*2);ctx.fillStyle=p.col+'88';ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  })();
+})();
+
+/* PAGE 3 CANVAS + mini planet */
+(function(){
+  const cv=document.getElementById('p3-canvas');
+  const resize=()=>{cv.width=window.innerWidth;cv.height=window.innerHeight;};
+  resize();window.addEventListener('resize',resize);
+  const ctx=cv.getContext('2d');
+  const stars=Array.from({length:130},()=>({x:Math.random()*cv.width,y:Math.random()*cv.height,r:Math.random()*1+.2,t:Math.random()*Math.PI*2,sp:Math.random()*.05+.01}));
+  let t=0;
+  (function draw(){
+    cv.width=window.innerWidth;cv.height=window.innerHeight;t+=.01;
+    ctx.clearRect(0,0,cv.width,cv.height);
+    ctx.fillStyle='#020d1a';ctx.fillRect(0,0,cv.width,cv.height);
+    stars.forEach(s=>{s.t+=s.sp*.03;ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fillStyle='rgba(180,220,255,'+(.08+.22*Math.abs(Math.sin(s.t)))+')';ctx.fill();});
+    ctx.strokeStyle='rgba(0,80,120,.07)';ctx.lineWidth=.7;
+    for(let i=0;i<13;i++){ctx.beginPath();ctx.moveTo(i/12*cv.width,0);ctx.lineTo(i/12*cv.width,cv.height);ctx.stroke();ctx.beginPath();ctx.moveTo(0,i/12*cv.height);ctx.lineTo(cv.width,i/12*cv.height);ctx.stroke();}
+    requestAnimationFrame(draw);
+  })();
+  const pc=document.getElementById('p3-planet'),pctx=pc.getContext('2d');let pr=0;
+  (function ap(){
+    pr+=.04;pctx.clearRect(0,0,72,72);
+    const cx=36,cy=36,r=27;
+    for(let i=20;i>=0;i--){const tt=i/20;pctx.beginPath();pctx.arc(cx-r*.12*(1-tt),cy,r*tt,0,Math.PI*2);pctx.fillStyle='rgb('+Math.round(45*(.45+.55*tt))+','+Math.round(110*(.45+.55*tt))+','+Math.round(75*(.45+.55*tt))+')';pctx.fill();}
+    pctx.save();pctx.beginPath();pctx.arc(cx,cy,r,0,Math.PI*2);pctx.clip();
+    pctx.fillStyle='rgba(0,70,150,.45)';pctx.fillRect(cx-r,cy+r*.35,r*2,r*.65);
+    pctx.fillStyle='rgba(255,255,255,.15)';pctx.beginPath();pctx.ellipse(cx-8,cy-8,12,4,0,0,Math.PI*2);pctx.fill();
+    pctx.restore();
+    const atm=pctx.createRadialGradient(cx,cy,r,cx,cy,r*1.18);
+    atm.addColorStop(0,'rgba(110,170,255,.22)');atm.addColorStop(1,'rgba(0,0,0,0)');
+    pctx.fillStyle=atm;pctx.beginPath();pctx.arc(cx,cy,r*1.18,0,Math.PI*2);pctx.fill();
+    pctx.beginPath();pctx.arc(cx,cy,r,0,Math.PI*2);pctx.strokeStyle='rgba(0,229,255,.3)';pctx.lineWidth=1;pctx.stroke();
+    pc.style.transform='rotate('+pr+'deg)';
+    requestAnimationFrame(ap);
+  })();
+})();
+
+/* SIMULATION */
+// Starting state: all variables at lowest bounds — students must discover optimal settings
+const S={star:'cool',dist:.1,mass:6e23,massRaw:0,radius:3000,radRaw:0,mag:0,atm:'SO2',water:0};
+let simInited=false;
+function initSim(){
+  if(simInited)return;simInited=true;
+  initHdr();initSF();initSliders();recalc();
+}
+function setStar(t){S.star=t;['sc','ss','sh'].forEach(i=>document.getElementById(i).classList.remove('on'));document.getElementById({cool:'sc',sun:'ss',hot:'sh'}[t]).classList.add('on');recalc();}
+function setAtm(t){S.atm=t;['O2','CO2','CH4','SO2'].forEach(a=>document.getElementById('a'+a).classList.remove('on'));document.getElementById('a'+t).classList.add('on');recalc();}
+function spct(el){el.style.setProperty('--pct',((el.value-el.min)/(el.max-el.min)*100)+'%');}
+function updateDist(el){spct(el);const au=(parseInt(el.value)/10).toFixed(1);S.dist=parseFloat(au);document.getElementById('dv').textContent=au+' AU';[['d0',.1,.4],['d1',.5,.8],['d2',.9,1.2],['d3',1.3,2.0],['d4',2.1,5.0]].forEach(([id,lo,hi])=>document.getElementById(id).classList.toggle('on',S.dist>=lo&&S.dist<=hi));recalc();}
+function updateMass(el){spct(el);const v=parseInt(el.value);S.massRaw=v;const kg=6e23+(3e25-6e23)*(v/100);S.mass=kg;const e=kg/1e24;document.getElementById('mv').textContent=(e<10?e.toFixed(2):((kg/1e25).toFixed(2)))+'×10'+(e<10?'²⁴':'²⁵')+' kg';document.getElementById('m0').classList.toggle('on',v<33);document.getElementById('m1').classList.toggle('on',v>=33&&v<66);document.getElementById('m2').classList.toggle('on',v>=66);recalc();}
+function updateRad(el){spct(el);const v=parseInt(el.value);S.radRaw=v;const r=3000+(12000-3000)*(v/100);S.radius=Math.round(r);document.getElementById('rv').textContent=S.radius.toLocaleString()+' km';document.getElementById('r0').classList.toggle('on',v<33);document.getElementById('r1').classList.toggle('on',v>=33&&v<66);document.getElementById('r2').classList.toggle('on',v>=66);recalc();}
+function updateMag(el){spct(el);S.mag=parseInt(el.value);document.getElementById('mgv').textContent=S.mag+' µT';document.getElementById('mg0').classList.toggle('on',S.mag<20);document.getElementById('mg1').classList.toggle('on',S.mag>=20&&S.mag<80);document.getElementById('mg2').classList.toggle('on',S.mag>=80);recalc();}
+function updateWater(el){spct(el);S.water=parseInt(el.value);document.getElementById('wv').textContent=S.water+'%';document.getElementById('w0').classList.toggle('on',S.water===0);document.getElementById('w1').classList.toggle('on',S.water>0&&S.water<=25);document.getElementById('w2').classList.toggle('on',S.water>25&&S.water<=70);document.getElementById('w3').classList.toggle('on',S.water>70);recalc();}
+
+function recalc(){
+  // ── STAR LUMINOSITY ──
+  const lumSol={cool:0.08,sun:1.0,hot:8.0}[S.star];
+
+  // ── STEFAN-BOLTZMANN EQUILIBRIUM TEMPERATURE ──
+  const T_eq = 278 * Math.pow(lumSol, 0.25) / Math.sqrt(S.dist);
+
+  // ── GREENHOUSE WARMING ──
+  // CO₂ runaway feedback: as distance decreases, CO₂ greenhouse amplifies non-linearly.
+  // At 1 AU a CO₂ atm adds ~120K. Closer in, the extra solar flux heats the surface,
+  // which drives more CO₂ sublimation/outgassing, adding more greenhouse — a feedback loop.
+  // We model this as: CO₂ offset scales with (1/dist)^0.6 so it grows as the planet moves inward.
+  let ghOffset;
+  if(S.atm==='CO2'){
+    ghOffset = 120 * Math.pow(1/S.dist, 0.6); // runaway amplification closer to star
+  } else {
+    // SO₂: sulfuric acid clouds reflect sunlight BUT trap infrared → net ~+55K
+    // CH₄: moderate greenhouse → +70K
+    // O₂:  Earth-like N₂/O₂ → +33K
+    ghOffset = {O2:33, CH4:70, SO2:55}[S.atm];
+  }
+  const ghFeedback = S.atm==='CO2' ? Math.max(0, ghOffset - 120) : 0;
+
+  let tempK = T_eq + ghOffset;
+  let temp = tempK - 273.15;
+  temp = Math.max(-200, Math.min(900, temp));
+
+  // ── SURFACE GRAVITY ──
+  const G=6.674e-11;
+  const grav=G*S.mass/Math.pow(S.radius*1000,2);
+  const gC=Math.max(0.1,Math.min(60,grav));
+
+  // ── ATMOSPHERIC PRESSURE ──
+  // Anchored so Earth inputs (gC=9.8, mag=50µT, O₂) → ~1.0 atm.
+  // magRetention uses power curve anchored at 50µT = 1.0
+  const gravFactor = Math.pow(gC / 9.8, 1.2);
+  const magRetention = Math.pow(Math.max(0.01, S.mag) / 50, 0.35);
+  // Composition: all set to 1.0 — thickness is driven by gravity/mag, not composition.
+  // CO₂ gets a slight bonus because volcanic CO₂ outgassing is self-reinforcing.
+  const atmDensity = {O2:1.0, CO2:1.2, CH4:1.05, SO2:1.15}[S.atm];
+  let pres = gravFactor * magRetention * atmDensity;
+  pres = Math.max(0.001, Math.min(14, pres));
+
+  // ── RADIATION RISK ──
+  const radBase={cool:8, sun:40, hot:95}[S.star];
+  let rad = radBase / (S.dist * S.dist);
+  rad *= Math.max(0.1, 1 - (S.mag/200)*0.70);
+  rad *= Math.max(0.2, 1 - Math.min(pres/3, 0.65));
+  if(S.atm==='SO2') rad *= 1.2;  // SO₂ lacks ozone → more UV despite some acid cloud reflection
+  if(S.atm==='O2')  rad *= 0.75; // ozone layer
+  rad = Math.round(Math.max(0, Math.min(100, rad)));
+
+  // ── WATER STATE (phase diagram) ──
+  const boilPoint = pres < 0.006 ? -999 : (100 + (pres - 1) * 28);
+  const meltPoint = -0.01;
+  let ws;
+  if(pres < 0.006){ws='Vaporized';}
+  else if(temp < meltPoint){ws='Frozen';}
+  else if(temp >= boilPoint){ws='Vaporized';}
+  else if(temp > boilPoint - 20){ws='Evaporating';}
+  else{ws='Liquid';}
+
+  // ── WATER AVAILABILITY ──
+  let wa,wp;
+  if(S.water===0){wa='None';wp=0;}
+  else if(ws==='Frozen'){wa='Locked in Ice';wp=Math.round(S.water*0.05);}
+  else if(ws==='Vaporized'){wa='Lost to Atmosphere';wp=0;}
+  else if(ws==='Evaporating'){wa='Rapidly Evaporating';wp=Math.round(S.water*0.15);}
+  else if(S.water<=10){wa='Trace';wp=S.water;}
+  else if(S.water<=30){wa='Scarce';wp=S.water;}
+  else if(S.water<=70){wa='Moderate–Abundant';wp=S.water;}
+  else{wa='Excess (Ocean World)';wp=S.water;}
+
+  // ── BREATHABILITY INDEX (0–100) ──
+  // No atmosphere scores 100 — even O₂/N₂ has fire risk and N₂ dependency.
+  // O₂-rich (Earth-like mix): ~92 — directly breathable but not perfect
+  // CO₂-rich: ~10 — asphyxiant, requires full life support (same hazard class as CH₄)
+  // CH₄-rich: ~10 — asphyxiant + explosion risk, requires full life support
+  // Toxic: ~2 — active chemical poison; not 0 because severity varies by compound
+  const breathBase = {O2:92, CO2:10, CH4:10, SO2:2}[S.atm];
+  // O₂ toxicity penalty at very high pressure (>3 atm causes pulmonary damage)
+  const presOxygenPenalty = S.atm==='O2' && pres>3 ? Math.round((pres-3)*15) : 0;
+  // CO₂ toxicity worsens slightly with higher pressure (more molecules per breath)
+  const co2PressPenalty = S.atm==='CO2' ? Math.min(5, Math.round(pres*2)) : 0;
+  const breathScore = Math.max(0, Math.min(95, breathBase - presOxygenPenalty - co2PressPenalty));
+  const breathCat = breathScore>=80?'Breathable':breathScore>=50?'Marginal':breathScore>=20?'Toxic':'Lethal';
+  const breathColor = breathScore>=80?'#00ff9d':breathScore>=50?'#ff6b35':breathScore>=20?'#ff6b35':'#ff2d55';
+  const breathNotes = {
+    O2: pres>3
+      ? 'Too much O₂ pressure — causes oxygen toxicity above 3 atm.'
+      : 'Directly breathable — no life support needed.',
+    CO2: 'CO₂ above 1% concentration causes poisoning and asphyxiation.',
+    CH4: 'Displaces breathable air and ignites on contact with oxygen.',
+    SO2: 'SO₂ destroys lung tissue on contact — immediately lethal.'
+  }[S.atm];
+
+  // ── SURVIVABILITY SCORING ──
+  let surv=100;
+  // Temperature
+  if(temp < -50 || temp > 150)      surv -= 40;
+  else if(temp < -15 || temp > 60)  surv -= 20;
+  else if(temp < 5  || temp > 40)   surv -= 8;
+  // Gravity
+  if(gC < 1.5 || gC > 22)          surv -= 30;
+  else if(gC < 3  || gC > 15)      surv -= 15;
+  else if(gC < 7  || gC > 12)      surv -= 5;
+  // Pressure
+  if(pres < 0.1 || pres > 6)       surv -= 30;
+  else if(pres < 0.35 || pres > 4) surv -= 15;
+  else if(pres < 0.7 || pres > 2)  surv -= 5;
+  // Radiation
+  if(rad > 80)      surv -= 35;
+  else if(rad > 50) surv -= 18;
+  else if(rad > 25) surv -= 8;
+  // Water
+  if(wp === 0)                       surv -= 25;
+  else if(wp < 10 || wp > 85)       surv -= 18;
+  else if(wp < 20 || wp > 75)       surv -= 8;
+  else if(wp < 30 || wp > 70)       surv -= 3;
+  // Breathability — major independent factor reflecting life support burden
+  // CO₂ and CH₄ are equally hazardous (both asphyxiants requiring full life support)
+  // TOX slightly worse — active poison requires chemical suits on top of life support
+  // O₂ gets a small unavoidable penalty (~5) because no planet is perfectly habitable
+  if(breathScore === 0)        surv -= 38;  // absolute worst — chemical poison + zero O₂
+  else if(breathScore <= 2)    surv -= 35;  // SO₂ — tissue-destroying chemical + sealed habitat
+  else if(breathScore <= 12)   surv -= 28;  // CO₂ or CH₄ — sealed habitat required always
+  else if(breathScore < 80)    surv -= 10;  // marginal — breathing equipment needed outside
+  else                         surv -= 5;   // O₂-rich — fire risk and N₂ dependency
+
+  // Cap at 90: no planet is perfectly habitable — cosmic rays, micrometeorites,
+  // geological hazards and other factors prevent a perfect score
+  surv=Math.round(Math.max(0,Math.min(99,surv)));
+
+  // ── DISPLAY ──
+  // Consistent four-tier color system for every variable:
+  // Green  (#00ff9d) = optimal range for human survival
+  // Blue   (#00e5ff) = acceptable / survivable but not ideal
+  // Orange (#ff6b35) = warning / approaching dangerous
+  // Red    (#ff2d55) = dangerous / lethal
+
+  // TEMPERATURE — optimal 32–122°F (0–50°C), acceptable -58–32°F or 122–212°F
+  const tempF = Math.round(temp * 9/5 + 32);
+  const tC = temp<-50?'#ff2d55': temp<0?'#6ab4ff': temp<=50?'#00ff9d': temp<=100?'#ff6b35': '#ff2d55';
+  const tCat = temp<-50?'Frozen': temp<0?'Sub-Zero': temp<=50?'Moderate': temp<=100?'Hot': 'Extreme';
+  se('tv',tempF+'°F',tC); se('tc',tCat,tC); sBar('tb',Math.max(2,(temp+200)/800*100),tC);
+
+  // GRAVITY — optimal 7–12 m/s², acceptable 3–7 or 12–15, warning 15–20, danger <1.5 or >20
+  const gCl = gC<1.5?'#ff2d55': gC<3?'#ff6b35': gC<7?'#00e5ff': gC<=12?'#00ff9d': gC<=15?'#00e5ff': gC<=20?'#ff6b35': '#ff2d55';
+  const gCat = gC<1.5?'Extreme Low': gC<3?'Low': gC<7?'Moderate': gC<=12?'Optimal': gC<=15?'Moderate': gC<=20?'High': 'Extreme High';
+  se('gv',gC.toFixed(1)+' m/s²',gCl); se('gc2',gCat,gCl); sBar('gb2',Math.min(100,gC/30*100),gCl);
+
+  // PRESSURE — optimal 0.7–1.5 atm, acceptable 0.35–0.7 or 1.5–2.5, warning 0.1–0.35 or 2.5–5, danger <0.1 or >5
+  const pC = pres<.1?'#ff2d55': pres<.35?'#ff6b35': pres<.7?'#00e5ff': pres<=1.5?'#00ff9d': pres<=2.5?'#00e5ff': pres<=5?'#ff6b35': '#ff2d55';
+  const pCat = pres<.1?'Minimal': pres<.35?'Thin': pres<.7?'Low': pres<=1.5?'Optimal': pres<=2.5?'Moderate': pres<=5?'Dense': 'Crushing';
+  se('pv',pres.toFixed(2)+' atm',pC); se('pc2',pCat,pC); sBar('pb2',Math.min(100,pres/8*100),pC);
+
+  // RADIATION — optimal 0–15, acceptable 15–25, warning 25–60, danger >60
+  const rC = rad<=15?'#00ff9d': rad<=25?'#00e5ff': rad<=60?'#ff6b35': '#ff2d55';
+  const rCat = rad<=15?'Low': rad<=25?'Moderate': rad<=60?'High': 'Extreme';
+  se('rva',rad+'/100',rC); se('rc',rCat,rC); sBar('rb',rad,rC);
+
+
+  // WATER AVAILABILITY — optimal 30–70% liquid, acceptable 20–30%, warning 10–20% or >75%, danger <10% or 0
+  const wC = wp===0?'#ff2d55': wp<10?'#ff2d55': wp<20?'#ff6b35': wp<30?'#00e5ff': wp<=70?'#00ff9d': wp<=80?'#00e5ff': '#ff6b35';
+  se('wav',wa,wC); sBar('wab',Math.min(100,wp),'#00e5ff');
+  // Override bar color to match tier
+  document.getElementById('wab').style.background=wC;
+
+  // CO₂ greenhouse feedback display
+  const ghRow=document.getElementById('ghrow');
+  if(S.atm==='CO2' && ghFeedback>5){
+    ghRow.style.display='flex';
+    const ghSeverity = ghFeedback<30?'Warming':ghFeedback<80?'Accelerating':'RUNAWAY';
+    const ghFeedbackF = Math.round(ghFeedback*9/5);
+    se('ghval','+'+ghFeedbackF+'°F extra',ghFeedback<30?'#ff6b35':'#ff2d55');
+    se('ghcat',ghSeverity,ghFeedback<30?'#ff6b35':'#ff2d55');
+    document.getElementById('ghrow').style.borderColor=ghFeedback<30?'rgba(255,107,53,.4)':'rgba(255,45,85,.6)';
+  } else {
+    ghRow.style.display='none';
+  }
+
+  // BREATHABILITY — consistent four-tier: green=breathable, blue=marginal, orange=toxic, red=lethal
+  const breathRowColor = breathScore>=80?'#00ff9d': breathScore>=50?'#00e5ff': breathScore>=20?'#ff6b35': '#ff2d55';
+  se('breath-score', breathCat, breathRowColor);
+  document.getElementById('breath-score').style.color = breathRowColor;
+  se('breath-cat', '', breathRowColor);
+  document.getElementById('breath-note').textContent = breathNotes;
+  document.getElementById('breath-row').style.borderColor =
+    breathScore>=80 ? 'rgba(0,255,157,.2)' : breathScore>=50 ? 'rgba(0,229,255,.2)' : breathScore>=20 ? 'rgba(255,107,53,.35)' : 'rgba(255,45,85,.35)';
+  document.getElementById('breath-row').style.background =
+    breathScore>=80 ? 'rgba(0,255,157,.04)' : breathScore>=50 ? 'rgba(0,229,255,.03)' : breathScore>=20 ? 'rgba(255,107,53,.05)' : 'rgba(255,45,85,.06)';
+
+  // SURVIVABILITY — five-tier: optimal(85+), favorable(70-84), challenging(45-69), hazardous(20-44), unsurvivable(<20)
+  const sC=surv>=85?'#00ff9d':surv>=70?'#00e5ff':surv>=45?'#6ab4ff':surv>=20?'#ff6b35':'#ff2d55';
+  const sCat=surv>=85?'Optimal':surv>=70?'Favorable':surv>=45?'Challenging':surv>=20?'Hazardous':'Unsurvivable';
+  se('sscore',surv,sC);se('scat',sCat,sC);
+  document.getElementById('sbar').style.cssText='width:'+surv+'%;background:linear-gradient(90deg,#001a0a,'+sC+')';
+  se2('sbadge',sCat,sC);
+
+  // ── COLONY DIFFICULTY — independent engineering complexity score ──
+  // Each factor contributes based on how much engineering it demands, not survivability.
+  const checks = []; // checklist items for 3D model brief
+  let diff2 = 0;
+
+  // ATMOSPHERE / LIFE SUPPORT
+  if(breathScore < 20){
+    diff2 += 35;
+    checks.push({ok:false, text:'Sealed pressurized habitat domes required'});
+    checks.push({ok:false, text:'Full life support & air recycling systems'});
+    checks.push({ok:false, text:'Airlock systems on all entry/exit points'});
+    if(S.atm==='SO2'){
+      checks.push({ok:false, text:'Acid-resistant materials on all exterior surfaces'});
+      checks.push({ok:false, text:'Acid rain protection — standard materials corrode'});
+      checks.push({ok:false, text:'Chemical hazmat suits required for all EVA'});
+    }
+  } else if(breathScore < 80){
+    diff2 += 18;
+    checks.push({ok:false, text:'Breathing equipment required outside'});
+    checks.push({ok:false, text:'Pressurized work zones recommended'});
+  } else {
+    diff2 += 5;
+    checks.push({ok:true, text:'Open structures viable — air is breathable'});
+  }
+
+  // TEMPERATURE
+  if(temp < -50 || temp > 150){
+    diff2 += 30;
+    checks.push({ok:false, text:'Extreme thermal insulation on all structures'});
+    checks.push({ok:false, text:'Active heating/cooling systems required'});
+  } else if(temp < -15 || temp > 60){
+    diff2 += 18;
+    checks.push({ok:false, text:'Heavy insulation & thermal regulation needed'});
+  } else if(temp < 5 || temp > 40){
+    diff2 += 8;
+    checks.push({ok:false, text:'Moderate insulation & climate control'});
+  } else {
+    checks.push({ok:true, text:'Temperature — standard construction viable'});
+  }
+
+  // RADIATION
+  if(rad > 75){
+    diff2 += 30;
+    checks.push({ok:false, text:'Underground habitat strongly recommended'});
+    checks.push({ok:false, text:'Thick radiation shielding on all surfaces'});
+  } else if(rad > 50){
+    diff2 += 18;
+    checks.push({ok:false, text:'Radiation shielding on roofs & walls'});
+  } else if(rad > 25){
+    diff2 += 8;
+    checks.push({ok:false, text:'Light radiation shielding on exterior surfaces'});
+  } else {
+    checks.push({ok:true, text:'Radiation — standard materials sufficient'});
+  }
+
+  // GRAVITY
+  if(gC < 1.5 || gC > 20){
+    diff2 += 25;
+    checks.push({ok:false, text:'Structural redesign for non-Earth gravity'});
+    checks.push({ok:false, text:'Centrifuge or exercise systems for bone/muscle health'});
+  } else if(gC < 4 || gC > 14){
+    diff2 += 12;
+    checks.push({ok:false, text:'Modified structural load calculations needed'});
+  } else {
+    checks.push({ok:true, text:'Gravity — Earth-like structural design usable'});
+  }
+
+  // PRESSURE
+  if(pres < 0.1 || pres > 6){
+    diff2 += 25;
+    checks.push({ok:false, text:'High-pressure hull integrity required'});
+    checks.push({ok:false, text:'Pressure suits for all external activity'});
+  } else if(pres < 0.5 || pres > 3){
+    diff2 += 12;
+    checks.push({ok:false, text:'Reinforced pressure-rated construction'});
+  } else {
+    checks.push({ok:true, text:'Pressure — standard sealed structures viable'});
+  }
+
+  // WATER
+  if(wp === 0){
+    diff2 += 25;
+    checks.push({ok:false, text:'Water import or extraction infrastructure'});
+    checks.push({ok:false, text:'Closed-loop water recycling — 100% required'});
+    if(S.atm==='SO2') checks.push({ok:false, text:'Any surface water is sulfuric acid — unusable'});
+  } else if(wp < 20){
+    diff2 += 14;
+    checks.push({ok:false, text:'Water extraction & purification systems'});
+    checks.push({ok:false, text:'High-efficiency water recycling'});
+  } else if(wp < 30){
+    diff2 += 6;
+    checks.push({ok:false, text:'Water collection & storage infrastructure'});
+  } else {
+    checks.push({ok:true, text:'Water — surface/subsurface sources accessible'});
+  }
+
+  // CO₂ RUNAWAY
+  if(S.atm==='CO2' && ghFeedback > 50){
+    diff2 += 15;
+    checks.push({ok:false, text:'Heat dissipation & reflective surface coatings'});
+  }
+
+  diff2 = Math.round(Math.min(100, diff2));
+  // COLONY DIFFICULTY — four-tier inverted: green=easy(≤25), blue=moderate(26–50), orange=difficult(51–75), red=extreme(>75)
+  const dC2 = diff2<=25?'#00ff9d': diff2<=50?'#00e5ff': diff2<=75?'#ff6b35': '#ff2d55';
+  const dCat2 = diff2<=25?'Easy': diff2<=50?'Moderate': diff2<=75?'Difficult': 'Extreme';
+  se('dscore',diff2,dC2); se('dcat',dCat2,dC2);
+  document.getElementById('dbar').style.cssText='width:'+diff2+'%;background:linear-gradient(90deg,#1a0500,'+dC2+')';
+  se2('dbadge',dCat2,dC2);
+  document.getElementById('dbadge').style.background='rgba(255,107,53,.12)';
+
+  // Render checklist — sans-serif for readability, mono for the ✓/⚠ icon
+  document.getElementById('checklist').innerHTML = checks.map(c =>
+    `<div style="font-size:clamp(11px,.82vw,13px);font-family:var(--sans);padding:4px 7px;border-left:2px solid ${c.ok?'#00ff9d':'#ff6b35'};color:${c.ok?'#00ff9d':'#a8d8ea'};background:${c.ok?'rgba(0,255,157,.04)':'rgba(255,107,53,.04)'};line-height:1.5"><span style="font-family:var(--mono)">${c.ok?'✓':'⚠'}</span> ${c.text}</div>`
+  ).join('');
+
+  const warns=[];
+  if(rad>75)warns.push({c:'#ff2d55',t:'&#9888; EXTREME RADIATION'});
+  if(temp>100)warns.push({c:'#ff2d55',t:'&#9888; TEMP EXCEEDS '+Math.round(100*9/5+32)+'°F BOILING POINT'});
+  if(temp<-50)warns.push({c:'#00cfff',t:'&#10052; FROZEN SURFACE (below '+Math.round(-50*9/5+32)+'°F)'});
+  if(gC>20)warns.push({c:'#ff2d55',t:'&#9888; EXTREME GRAVITY'});
+  if(pres<.1)warns.push({c:'#ff6b35',t:'&#9888; NEAR-VACUUM'});
+  if(pres>5)warns.push({c:'#ff6b35',t:'&#9888; CRUSHING PRESSURE'});
+  if(S.atm==='SO2')warns.push({c:'#ff6b35',t:'&#9762; SO&#8322; ATMOSPHERE — acid rain, lethal atmosphere'});
+  if(S.atm==='CO2'&&ghFeedback>80)warns.push({c:'#ff2d55',t:'&#9888; RUNAWAY GREENHOUSE — Venus scenario'});
+  if(S.atm==='CH4')warns.push({c:'#ff6b35',t:'&#9888; METHANE ATMOSPHERE — not breathable'});
+  if(surv<20)warns.push({c:'#ff2d55',t:'&#128680; UNSURVIVABLE'});
+  document.getElementById('hal').style.display=warns.length?'block':'none';
+  // Warning messages — icon stays mono, descriptive text is sans-serif for quick reading
+  document.getElementById('wbox').innerHTML=warns.map(w=>'<div style="font-size:clamp(11px,.82vw,13px);font-family:var(--sans);padding:4px 7px;margin-bottom:3px;border-left:2px solid '+w.c+';color:'+w.c+';background:rgba(255,45,85,.04);line-height:1.5">'+w.t+'</div>').join('');
+  document.getElementById('pst').textContent='T:'+tempF+'°F  g:'+gC.toFixed(1)+'  P:'+pres.toFixed(2)+'atm  RAD:'+rad+'  SURV:'+surv;
+  // Store derived state — deployColony reads this so modal always matches what's on screen
+  lastDerived={temp,tempF,gC,pres,rad,ws,wp,breathScore,surv,diff2,ghFeedback,
+    star:S.star,dist:S.dist,atm:S.atm,mag:S.mag,water:S.water};
+
+  drawPlanet({temp,gC,pres,rad,ws,wp,ghFeedback});
+}
+function se(id,v,c){const el=document.getElementById(id);if(el){el.textContent=v;if(c)el.style.color=c;}}
+function se2(id,v,c){const el=document.getElementById(id);if(el){el.textContent=v;el.style.color=c;}}
+function sBar(id,pct,color){const el=document.getElementById(id);if(el){el.style.width=Math.max(1,Math.min(100,pct))+'%';el.style.background=color;}}
+function drawPlanet({temp,gC,pres,rad,ws,wp,ghFeedback}){
+  const cv=document.getElementById('pl'),wrap=document.getElementById('pw');
+  const sz=Math.max(130,Math.min(wrap.offsetWidth||220,wrap.offsetHeight||220,240));
+  cv.width=sz;cv.height=sz;const ctx=cv.getContext('2d'),cx=sz/2,cy=sz/2,r=sz*.4;ctx.clearRect(0,0,sz,sz);
+  let bR,bG,bB;if(temp<-100){bR=160;bG=195;bB=240;}else if(temp<0){bR=100;bG=140;bB=190;}else if(temp<50){bR=45;bG=110;bB=75;}else if(temp<150){bR=170;bG=95;bB=25;}else{bR=210;bG=45;bB=15;}
+  for(let i=30;i>=0;i--){const t=i/30;ctx.beginPath();ctx.arc(cx-r*.12*(1-t),cy,r*t,0,Math.PI*2);ctx.fillStyle='rgb('+Math.round(bR*(.45+.55*t))+','+Math.round(bG*(.45+.55*t))+','+Math.round(bB*(.45+.55*t))+')';ctx.fill();}
+  if(temp<-20){ctx.save();ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.clip();const cs=Math.min(.85,(-temp/200)*.75+.1);ctx.fillStyle=temp<-100?'rgba(200,225,255,.95)':'rgba(215,235,255,.75)';ctx.fillRect(cx-r,cy-r,r*2,r*cs*1.6);ctx.fillRect(cx-r,cy+r-r*cs*1.6,r*2,r*cs*1.6);ctx.restore();}
+  if(wp>10&&ws==='Liquid'){ctx.save();ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.clip();const wh=r*(wp/100)*1.3;ctx.fillStyle='rgba(0,70,150,.45)';ctx.fillRect(cx-r,cy+r-wh,r*2,wh);ctx.strokeStyle='rgba(0,140,210,.3)';ctx.lineWidth=1.5;for(let i=0;i<3;i++){ctx.beginPath();for(let x=-r;x<=r;x+=5){const y=cy+r-wh+(i*9)+Math.sin(x*.2+i)*3;x===-r?ctx.moveTo(cx+x,y):ctx.lineTo(cx+x,y);}ctx.stroke();}ctx.restore();}
+  if(pres>.3&&S.atm!=='TOX'){ctx.save();ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.clip();ctx.fillStyle='rgba(255,255,255,'+(Math.min(.55,pres/5)*.4)+')';[[cx-r*.2,cy-r*.24,r*.38,r*.12],[cx+r*.16,cy+r*.16,r*.5,r*.11],[cx-r*.38,cy+r*.29,r*.33,r*.1],[cx+r*.24,cy-r*.38,r*.42,r*.12]].forEach(a=>{ctx.beginPath();ctx.ellipse(a[0],a[1],a[2],a[3],0,0,Math.PI*2);ctx.fill();});ctx.restore();}
+  if(S.atm==='SO2'){
+    // SO₂: thick yellow-orange sulfuric acid clouds, like Venus
+    ctx.save();ctx.beginPath();ctx.arc(cx,cy,r*1.12,0,Math.PI*2);ctx.clip();
+    const hg=ctx.createRadialGradient(cx,cy,r*.9,cx,cy,r*1.12);
+    hg.addColorStop(0,'rgba(200,160,0,0)');
+    hg.addColorStop(.4,'rgba(200,140,0,.22)');
+    hg.addColorStop(1,'rgba(180,100,0,.6)');
+    ctx.fillStyle=hg;ctx.beginPath();ctx.arc(cx,cy,r*1.12,0,Math.PI*2);ctx.fill();
+    // Acid cloud bands on surface
+    ctx.save();ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.clip();
+    for(let i=0;i<4;i++){
+      ctx.beginPath();ctx.ellipse(cx,cy-r*.4+i*r*.28,r*.9,r*.06,0,0,Math.PI*2);
+      ctx.fillStyle=`rgba(180,${120+i*10},0,.18)`;ctx.fill();
+    }
+    ctx.restore();
+    ctx.restore();
+  }
+  if(temp>100){const hg=ctx.createRadialGradient(cx,cy,r,cx,cy,r*1.25);hg.addColorStop(0,'rgba(255,'+(temp>200?20:90)+',0,.45)');hg.addColorStop(1,'rgba(255,70,0,0)');ctx.fillStyle=hg;ctx.beginPath();ctx.arc(cx,cy,r*1.25,0,Math.PI*2);ctx.fill();}
+  // CO₂ runaway greenhouse: pulsing orange-red atmospheric haze intensifies with feedback
+  if(S.atm==='CO2'&&ghFeedback>5){
+    const ghIntensity=Math.min(1,ghFeedback/150);
+    const ghGlow=ctx.createRadialGradient(cx,cy,r*.85,cx,cy,r*1.35);
+    ghGlow.addColorStop(0,`rgba(255,${Math.round(120-ghIntensity*100)},0,${ghIntensity*.55})`);
+    ghGlow.addColorStop(.6,`rgba(255,80,0,${ghIntensity*.3})`);
+    ghGlow.addColorStop(1,'rgba(255,40,0,0)');
+    ctx.fillStyle=ghGlow;ctx.beginPath();ctx.arc(cx,cy,r*1.35,0,Math.PI*2);ctx.fill();
+    // Swirling heat bands visible on surface for strong feedback
+    if(ghFeedback>50){
+      ctx.save();ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.clip();
+      for(let i=0;i<3;i++){
+        ctx.beginPath();ctx.ellipse(cx,cy-r*.3+i*r*.35,r*.9,r*.08,Math.PI*.1*i,0,Math.PI*2);
+        ctx.fillStyle=`rgba(255,${80+i*20},0,${ghIntensity*.25})`;ctx.fill();
+      }
+      ctx.restore();
+    }
+  }
+  if(pres>.05){const ac={O2:'rgba(110,170,255,.22)',CO2:'rgba(255,150,50,.28)',CH4:'rgba(170,110,255,.22)',SO2:'rgba(200,140,0,.28)'}[S.atm];const rg=ctx.createRadialGradient(cx,cy,r,cx,cy,r*1.19);rg.addColorStop(0,ac);rg.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=rg;ctx.beginPath();ctx.arc(cx,cy,r*1.19,0,Math.PI*2);ctx.fill();}
+  if(S.mag>80){ctx.save();ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.clip();ctx.strokeStyle='rgba(0,255,157,'+((S.mag-80)/200*.45)+')';ctx.lineWidth=2;for(let i=0;i<4;i++){ctx.beginPath();ctx.moveTo(cx-r+i*r*.22,cy+r*.55);ctx.bezierCurveTo(cx-r*.32+i*r*.2,cy,cx+i*r*.2,cy-r*.75,cx+r*.2+i*r*.22,cy-r);ctx.stroke();}ctx.restore();}
+  if(rad>75){ctx.save();ctx.globalAlpha=.22;ctx.fillStyle='#ff0044';ctx.font='bold '+Math.round(r*.25)+'px monospace';ctx.textAlign='center';ctx.fillText('\u2622',cx,cy+r*.1);ctx.restore();}
+  ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.strokeStyle='rgba(0,229,255,.28)';ctx.lineWidth=1.5;ctx.stroke();
+  ctx.save();const sg=ctx.createRadialGradient(cx-r*.25,cy,r*.1,cx+r*.55,cy,r*1.35);sg.addColorStop(0,'rgba(0,0,0,0)');sg.addColorStop(.55,'rgba(0,0,0,0)');sg.addColorStop(.75,'rgba(0,0,0,.28)');sg.addColorStop(1,'rgba(0,0,0,.68)');ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.clip();ctx.fillStyle=sg;ctx.fillRect(0,0,sz,sz);ctx.restore();
+  ctx.save();ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.clip();const hl=ctx.createRadialGradient(cx-r*.38,cy-r*.38,2,cx-r*.28,cy-r*.28,r*.5);hl.addColorStop(0,'rgba(255,255,255,.22)');hl.addColorStop(1,'rgba(255,255,255,0)');ctx.fillStyle=hl;ctx.fillRect(0,0,sz,sz);ctx.restore();
+  const os=r*2+45;document.getElementById('o1').style.cssText='width:'+os+'px;height:'+os+'px';document.getElementById('o2').style.cssText='width:'+(os+60)+'px;height:'+(os+60)+'px;animation-delay:.8s;opacity:.22';
+}
+function initHdr(){
+  const cv=document.getElementById('shc'),h=document.getElementById('shdr');
+  cv.width=h.offsetWidth||900;cv.height=h.offsetHeight||65;
+  const ctx=cv.getContext('2d'),W=cv.width,H=cv.height;
+  const stars=Array.from({length:70},()=>({x:Math.random()*W,y:Math.random()*H,r:Math.random()*.9+.1,t:Math.random()*Math.PI*2,sp:Math.random()*.08+.01}));
+  (function a(){ctx.clearRect(0,0,W,H);stars.forEach(s=>{s.t+=s.sp*.03;ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fillStyle='rgba(200,230,255,'+(.12+.3*Math.abs(Math.sin(s.t)))+')';ctx.fill();});requestAnimationFrame(a);})();
+}
+function initSF(){
+  const cv=document.getElementById('sf'),p=cv.parentElement;cv.width=p.offsetWidth||500;cv.height=p.offsetHeight||400;
+  const ctx=cv.getContext('2d'),W=cv.width,H=cv.height;
+  const stars=Array.from({length:180},()=>({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.2+.2,t:Math.random()*Math.PI*2,sp:Math.random()*.1+.02}));
+  (function a(){ctx.clearRect(0,0,W,H);stars.forEach(s=>{s.t+=s.sp*.03;ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fillStyle='rgba(180,220,255,'+(.2+.5*Math.abs(Math.sin(s.t)))+')';ctx.fill();});requestAnimationFrame(a);})();
+}
+let rotA=0;(function rot(){rotA+=.04;const cv=document.getElementById('pl');if(cv)cv.style.transform='rotate('+rotA+'deg)';requestAnimationFrame(rot);})();
+function initSliders(){
+  // All sliders start at lowest bound (0%)
+  document.getElementById('ds').style.setProperty('--pct','0%');   // 0.1 AU = value 1, min 1 → 0%
+  document.getElementById('ms').style.setProperty('--pct','0%');   // smallest mass
+  document.getElementById('rs').style.setProperty('--pct','0%');   // smallest radius
+  document.getElementById('mgs').style.setProperty('--pct','0%');  // 0 µT
+  document.getElementById('ws').style.setProperty('--pct','0%');   // 0% water
+}
+let rt;window.addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(()=>{if(simInited){initSF();initHdr();recalc();}},200);});
+</script>
+<!-- PAGE 5: COLONY BRIEF -->
+<div class="page" id="p5" style="display:none;overflow-y:auto;justify-content:flex-start;align-items:stretch;padding:0">
+  <div style="min-height:100vh;background:#020d1a;padding:28px 36px 40px;max-width:1100px;margin:0 auto;width:100%" id="p5-inner">
+
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;padding-bottom:16px;border-bottom:1px solid #0a2a40">
+      <div style="display:flex;align-items:center;gap:14px">
+        <svg width="40" height="40" viewBox="0 0 38 38" fill="none">
+          <circle cx="19" cy="19" r="18" stroke="rgba(0,229,255,0.2)" stroke-width="1"/>
+          <circle cx="19" cy="19" r="3" fill="#ffe066" opacity="0.9"/>
+          <circle cx="19" cy="1" r="2.2" fill="#00e5ff" opacity="0.85"/>
+          <circle cx="31" cy="19" r="1.5" fill="#00ff9d" opacity="0.8"/>
+        </svg>
+        <div>
+          <div style="font-size:clamp(13px,1.5vw,19px);letter-spacing:4px;color:#00e5ff;text-transform:uppercase;font-family:var(--mono)">Colony Deployment Brief</div>
+          <div style="font-size:clamp(9px,.75vw,11px);letter-spacing:3px;color:#4a7a90;margin-top:3px;font-family:var(--mono);text-transform:uppercase">Mission Control — Exoplanet Habitability Program</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <button onclick="goTo(4)" style="padding:9px 18px;font-family:var(--mono);font-size:clamp(9px,.78vw,11px);letter-spacing:2px;text-transform:uppercase;background:transparent;border:1px solid #0a2a40;color:#4a7a90;cursor:pointer;border-radius:3px;transition:all .2s" onmouseover="this.style.borderColor='#00e5ff';this.style.color='#00e5ff'" onmouseout="this.style.borderColor='#0a2a40';this.style.color='#4a7a90'">← Reconfigure</button>
+        <button onclick="downloadBrief()" style="padding:9px 18px;font-family:var(--mono);font-size:clamp(9px,.78vw,11px);letter-spacing:2px;text-transform:uppercase;background:rgba(0,229,255,.08);border:1px solid #00e5ff;color:#00e5ff;cursor:pointer;border-radius:3px;transition:all .2s" onmouseover="this.style.background='rgba(0,229,255,.18)';this.style.color='#fff'" onmouseout="this.style.background='rgba(0,229,255,.08)';this.style.color='#00e5ff'">⬇ Download Brief</button>
+      </div>
+    </div>
+
+    <!-- Planet visual + stats grid side by side -->
+    <div style="display:flex;gap:24px;align-items:flex-start;margin-bottom:24px">
+
+      <!-- Planet visual -->
+      <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:10px">
+        <div style="font-size:clamp(9px,.78vw,11px);letter-spacing:3px;color:#4a7a90;text-transform:uppercase;font-family:var(--mono);align-self:flex-start">▸ Planet Visual</div>
+        <div style="position:relative;width:180px;height:180px;display:flex;align-items:center;justify-content:center">
+          <canvas id="p5-starfield" style="position:absolute;inset:0;width:100%;height:100%;border-radius:4px"></canvas>
+          <div style="position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,20,40,.04) 2px,rgba(0,20,40,.04) 4px);border-radius:4px;pointer-events:none"></div>
+          <!-- orbit rings -->
+          <div id="p5-orbit1" style="position:absolute;border-radius:50%;border:1px solid rgba(0,229,255,.1);animation:op 4s ease-in-out infinite"></div>
+          <div id="p5-orbit2" style="position:absolute;border-radius:50%;border:1px solid rgba(0,229,255,.07);animation:op 4s ease-in-out infinite;animation-delay:.8s"></div>
+          <canvas id="p5-planet" style="position:relative;z-index:2;display:block"></canvas>
+        </div>
+        <div id="p5-planet-label" style="display:none"></div>
+      </div>
+
+      <!-- Stats grid -->
+      <div style="flex:1;min-width:0">
+        <div style="font-size:clamp(9px,.78vw,11px);letter-spacing:3px;color:#4a7a90;text-transform:uppercase;font-family:var(--mono);margin-bottom:12px">▸ Planet Diagnostic Summary</div>
+        <div id="p5-stats"></div>
+      </div>
+    </div>
+
+    <!-- Divider -->
+    <div style="border-top:1px solid #0a2a40;margin-bottom:24px"></div>
+
+    <!-- Conditions heading -->
+    <div style="margin-bottom:18px">
+      <div style="font-size:clamp(9px,.78vw,11px);letter-spacing:3px;color:#4a7a90;text-transform:uppercase;font-family:var(--mono);margin-bottom:6px">▸ Colony Design Conditions</div>
+      <div style="font-size:clamp(12px,1vw,15px);color:#a8d8ea;font-family:var(--sans);line-height:1.6">Your colony must be engineered to meet the following <span id="p5-ncond" style="color:#00ff9d;font-family:var(--mono);font-weight:bold">3</span> conditions based on your planet configuration.</div>
+    </div>
+
+    <!-- Condition cards -->
+    <div id="p5-conditions" style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:28px"></div>
+
+    <!-- Footer note -->
+    <div style="border-top:1px solid #0a2a40;padding-top:16px;display:flex;align-items:center;gap:10px">
+      <span style="color:#ff6b35;font-size:14px;flex-shrink:0">⚠</span>
+      <span style="font-size:clamp(11px,.85vw,13px);color:#4a7a90;font-family:var(--sans);line-height:1.6">Your 3D colony model must visually incorporate all conditions listed above. Each condition changes what your colony looks like, how it is built, and what infrastructure it requires.</span>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── CONDITION MAPPING ──
+function getColonyConditions(state, derived){
+  const {star,dist,atm,mag,water} = state;
+  const {temp,gC,pres,rad,ws,wp,breathScore,surv,ghFeedback} = derived;
+  const conditions = [];
+
+  // CONDITION 1 — Atmosphere (always first, highest priority)
+  if(atm==='O2' && pres>=0.7){
+    conditions.push({
+      num:1, cat:'Atmospheric', icon:'🌿',
+      title:'Open-Air Zones',
+      desc:'The atmosphere is breathable and pressure is adequate. Your colony can include open outdoor spaces — parks, plazas, exposed walkways, and outdoor agriculture are all viable.',
+      items:['Outdoor communal spaces and parks','Exposed walkways between structures','Open-air agricultural zones','No airlock requirement for exterior doors']
+    });
+  } else if(atm==='O2' && pres<0.7){
+    conditions.push({
+      num:1, cat:'Atmospheric', icon:'🔵',
+      title:'Pressurized Domes',
+      desc:'Air is breathable but atmospheric pressure is too low for humans without pressurization. All habitable areas must be enclosed under pressurized transparent domes.',
+      items:['Transparent pressurized dome structures','Airlock entry/exit on all domes','Pressure regulation systems inside domes','Sealed corridors connecting all structures']
+    });
+  } else if(atm==='CO2'){
+    conditions.push({
+      num:1, cat:'Atmospheric', icon:'☣',
+      title:'Full Atmospheric Sealing',
+      desc:'CO₂-rich atmosphere is immediately toxic — displaces oxygen and causes asphyxiation above 1% concentration. Every structure must be hermetically sealed with full life support.',
+      items:['Hermetically sealed habitat modules','Airlock vestibule on every entrance','Internal O₂/N₂ life support systems','CO₂ scrubbing towers integrated into colony']
+    });
+  } else if(atm==='CH4'){
+    conditions.push({
+      num:1, cat:'Atmospheric', icon:'🔥',
+      title:'Full Atmospheric Sealing',
+      desc:'Methane atmosphere is unbreathable and highly flammable. All structures must be sealed and explosion-proofed. No open flames or exposed electrical permitted anywhere.',
+      items:['Hermetically sealed habitat modules','Airlock vestibule on every entrance','Explosion-proof electrical and construction','Internal O₂/N₂ life support systems']
+    });
+  } else if(atm==='SO2'){
+    conditions.push({
+      num:1, cat:'Atmospheric', icon:'⚗',
+      title:'Acid-Resistant Exterior',
+      desc:'SO₂ atmosphere produces sulfuric acid rain that corrodes standard building materials. All exterior surfaces must use acid-resistant ceramics or glass coatings, and all structures must be sealed.',
+      items:['Acid-resistant ceramic/glass exterior cladding','Full hermetic sealing on all structures','Airlocks with acid decontamination','Drainage channels around all structures','Chemical hazmat suits for all EVA']
+    });
+  }
+
+  // CONDITION 2 — Highest severity environmental factor
+  // Check radiation → temperature → water → gravity in priority order
+  let cond2 = null;
+
+  if(!cond2 && rad > 80){
+    cond2 = {
+      num:2, cat:'Radiation', icon:'☢',
+      title:'Underground Habitat',
+      desc:'Extreme radiation levels make surface habitation lethal without meters of shielding. The primary colony must be constructed underground, using the planet\'s own rock and soil as a radiation barrier.',
+      items:['Primary living quarters built underground','Surface access only via shielded lift shafts','Reinforced tunnel networks between modules','Minimal above-ground surface structures','Radiation dosimeters required in all areas']
+    };
+  } else if(!cond2 && rad > 60){
+    cond2 = {
+      num:2, cat:'Radiation', icon:'🛡',
+      title:'Regolith Shielding',
+      desc:'High radiation requires thick physical shielding over all inhabited structures. Regolith (surface rock and soil) is piled against all building exteriors to a depth of at least 1 meter.',
+      items:['1m+ regolith mounded against all exterior walls','No above-ground windows','Thick-walled roof construction','Shielded surface walkway tunnels between structures','Radiation monitoring stations throughout colony']
+    };
+  } else if(!cond2 && rad > 25){
+    cond2 = {
+      num:2, cat:'Radiation', icon:'🪟',
+      title:'Windowless Bunker Exterior',
+      desc:'Moderate-high radiation requires elimination of weak points in shielding. All exterior walls must be windowless with radiation-absorbing composite materials. Interior spaces use artificial lighting only.',
+      items:['No exterior windows on any structure','Radiation-absorbing composite wall panels','Interior artificial lighting throughout','Radiation-rated entry airlocks','Regular radiation monitoring for inhabitants']
+    };
+  }
+
+  if(!cond2 && temp > 60){
+    cond2 = {
+      num:2, cat:'Thermal', icon:'♨',
+      title:'Heat Dissipation Systems',
+      desc:'Surface temperatures far exceed human tolerance. All structures require active heat management — large radiator fins to dump excess thermal energy, and reflective surface coatings to minimize solar absorption.',
+      items:['Large radiator fin arrays on all building exteriors','Reflective white or metallic exterior surface coating','Active cooling systems in all inhabited spaces','Heat-resistant airlock materials','Shade structures over walkway connections']
+    };
+  } else if(!cond2 && (atm==='CO2' && ghFeedback > 50)){
+    cond2 = {
+      num:2, cat:'Thermal', icon:'🪞',
+      title:'Reflective Surface Coating',
+      desc:'Runaway greenhouse effect is amplifying surface temperatures dangerously. All exterior surfaces must be coated with highly reflective materials to minimize heat absorption and reduce internal cooling load.',
+      items:['Mirror-finish or bright white exterior coating on all surfaces','Reflective roof panels angled to deflect maximum solar energy','Insulated double-wall construction','Active cooling backup systems','Heat monitoring with automatic shutdown protocols']
+    };
+  } else if(!cond2 && temp < -15){
+    cond2 = {
+      num:2, cat:'Thermal', icon:'🧊',
+      title:'Insulated Thermal Habitat',
+      desc:'Extreme cold requires complete thermal isolation of all inhabited spaces. Buildings must be buried in insulating berms of surface material, with no exposed surfaces to the atmosphere.',
+      items:['Buildings buried in insulating regolith berms','Triple-wall insulated construction','Heated airlock transition zones','No exposed building surfaces to atmosphere','Geothermal or nuclear heating systems']
+    };
+  }
+
+  if(!cond2 && wp === 0){
+    cond2 = {
+      num:2, cat:'Water', icon:'🚀',
+      title:'Water Import Terminal',
+      desc:'No water exists on this planet in any accessible form. The colony requires a dedicated water import infrastructure — landing facilities for water-delivery spacecraft and large pressurized storage tanks.',
+      items:['Dedicated spacecraft landing pad for water delivery','Large pressurized underground water storage tanks','100% closed-loop water recycling — zero waste permitted','Water rationing and monitoring systems','Emergency reserve tanks with 6-month minimum supply']
+    };
+  } else if(!cond2 && ws==='Frozen' && water>0){
+    cond2 = {
+      num:2, cat:'Water', icon:'⛏',
+      title:'Ice Mining Infrastructure',
+      desc:'Water exists but is entirely locked in surface or subsurface ice. The colony requires ice mining equipment to extract and melt ice for usable water.',
+      items:['Ice drilling rigs and extraction equipment','Heated melt chambers and processing facility','Insulated water transport pipes to storage','Large heated water storage tanks','Backup water recycling for processing losses']
+    };
+  } else if(!cond2 && wp < 20){
+    cond2 = {
+      num:2, cat:'Water', icon:'♻',
+      title:'Closed-Loop Water Recycling',
+      desc:'Water is critically scarce. The colony must achieve near-100% water recycling — every drop of grey water, condensation, and waste water is recaptured, purified, and reused.',
+      items:['Water recapture systems in all buildings','Atmospheric condensation collectors','Visible water recycling tower structures','Zero-discharge waste management','Colony-wide water monitoring and rationing systems']
+    };
+  } else if(!cond2 && wp >= 30 && wp <= 70 && ws==='Liquid'){
+    cond2 = {
+      num:2, cat:'Water', icon:'🌊',
+      title:'Ocean / Lake Access Colony',
+      desc:'Abundant liquid water is available on the surface — a major advantage for colonization. The colony design should incorporate direct water access infrastructure.',
+      items:['Water processing and purification plant on shoreline','Colony positioned adjacent to water body','Boat dock or water access platform','Underwater resource exploration modules (optional)','Flood protection berms around colony perimeter']
+    };
+  }
+
+  if(!cond2 && gC < 3){
+    cond2 = {
+      num:2, cat:'Gravity', icon:'🌀',
+      title:'Centrifuge Ring Modules',
+      desc:'Gravity is dangerously low — prolonged exposure causes severe bone density loss and muscle atrophy. The colony must include rotating centrifuge ring modules to simulate higher gravity for inhabitants.',
+      items:['Rotating centrifuge ring habitat modules','Anchor cable systems on all tall structures','Low-gravity movement assistance rails','Tethered EVA safety lines for exterior work','Bone density monitoring for all inhabitants']
+    };
+  } else if(!cond2 && gC < 7){
+    cond2 = {
+      num:2, cat:'Gravity', icon:'💪',
+      title:'Centrifuge Ring Modules',
+      desc:'Below-Earth gravity causes gradual bone and muscle deterioration. Centrifuge modules provide artificial gravity for living quarters, and structural anchors prevent buildings from shifting under low-g conditions.',
+      items:['Centrifuge ring modules for sleeping quarters','Anchor foundation systems on all structures','Exercise facilities with resistance equipment','Low-gravity adaptive structural connections','Regular health monitoring protocols']
+    };
+  } else if(!cond2 && gC > 15){
+    cond2 = {
+      num:2, cat:'Gravity', icon:'🏋',
+      title:'Heavy-Gravity Construction',
+      desc:'Extreme gravity places enormous structural loads on all buildings. Every structure must be engineered for high compressive loads — short, wide, with massively reinforced foundations.',
+      items:['Maximum building height: 2 storeys','Extra-wide load-bearing walls and columns','Reinforced slab foundations','No tall or slender structures','Exoskeleton support suits for inhabitants during EVA']
+    };
+  } else if(!cond2 && gC > 12){
+    cond2 = {
+      num:2, cat:'Gravity', icon:'🔲',
+      title:'Compact Footprint Design',
+      desc:'Above-Earth gravity requires all structures to be low-profile and wide-based. Tall buildings would require impractical structural reinforcement. Colony design must prioritize horizontal sprawl over vertical building.',
+      items:['All buildings maximum 2-storey height','Wide footprint low-profile construction','Reinforced horizontal connection corridors','Spread-out single-level habitat modules','Heavy-duty foundation engineering']
+    };
+  }
+
+  // Aurora reward — fires if no cond2 found yet (optimal planet) and mag is strong
+  if(!cond2 && mag >= 80 && rad <= 25 && surv >= 70){
+    cond2 = {
+      num:2, cat:'Special', icon:'🌌',
+      title:'Aurora Observation Towers',
+      desc:'Your planet\'s strong magnetic field produces spectacular aurora displays — a unique reward for optimal planetary conditions. The colony design can incorporate observation towers to take advantage of this natural phenomenon.',
+      items:['Tall observation tower with 360° viewing platform','Transparent dome viewing gallery','Aurora forecasting station','Tourism or research facility designation','Decorative aurora-inspired architectural lighting']
+    };
+  }
+
+  // Fallback if still no cond2 (very edge case — everything optimal)
+  if(!cond2){
+    cond2 = {
+      num:2, cat:'Water', icon:'🌊',
+      title:'Water Processing Plant',
+      desc:'Surface water is available and liquid. A water processing and distribution plant ensures clean water supply for all colony inhabitants.',
+      items:['Water intake and filtration plant','Distribution network to all habitat modules','Water quality monitoring systems','Storage reservoir for supply security','Irrigation infrastructure for agriculture']
+    };
+  }
+
+  conditions.push(cond2);
+
+  // CONDITION 3 — Energy (always, type determined by star/distance/atmosphere)
+  let cond3;
+  if(atm==='SO2'){
+    cond3 = {
+      num:3, cat:'Energy', icon:'🌋',
+      title:'Geothermal Energy Plant',
+      desc:'The volcanic activity that produces a SO₂ atmosphere is also a powerful energy source. The colony must tap into geothermal heat for primary power generation — making use of the planet\'s own geological activity.',
+      items:['Geothermal well drilling infrastructure','Steam turbine power generation plant','Geothermal pipe network from vents to colony','Heat exchanger systems for power conversion','Backup power storage for geological quiet periods']
+    };
+  } else if(star==='cool' || dist > 1.5){
+    cond3 = {
+      num:3, cat:'Energy', icon:'⚛',
+      title:'Nuclear Power Plant',
+      desc:'Distance from the star or low stellar luminosity makes solar power insufficient as a primary energy source. A nuclear fission reactor provides the reliable, high-output power a colony requires.',
+      items:['Nuclear reactor building set apart from habitat zone','Radiation exclusion zone around reactor','Power transmission lines to all colony modules','Spent fuel storage facility','Backup generator systems']
+    };
+  } else if(pres > 1.5){
+    cond3 = {
+      num:3, cat:'Energy', icon:'💨',
+      title:'Wind Turbine Array',
+      desc:'Dense atmosphere provides excellent conditions for wind energy generation. A wind turbine array on the colony perimeter supplements primary power and reduces dependence on a single energy source.',
+      items:['Wind turbine array on colony perimeter','Power grid connection to all modules','Energy storage battery bank','Wind monitoring station','Turbine maintenance access infrastructure']
+    };
+  } else {
+    cond3 = {
+      num:3, cat:'Energy', icon:'☀',
+      title:'Large Solar Array Field',
+      desc:'Proximity to a medium or hot star makes solar power the primary and most efficient energy source. Extensive solar panel fields surround the colony to capture maximum stellar energy.',
+      items:['Extensive solar panel arrays surrounding colony','Solar tracking mounting systems','Battery storage for night/storm periods','Power distribution grid to all modules','Panel cleaning and maintenance infrastructure']
+    };
+  }
+  conditions.push(cond3);
+  return conditions;
+}
+
+// Store derived values for Page 5
+let P5 = {};
+let lastDerived = {}; // always mirrors the last recalc() output — used by deployColony
+
+function deployColony(){
+  // Read directly from lastDerived — guaranteed to match what's shown on screen
+  const {surv} = lastDerived;
+  P5 = lastDerived;
+
+  // Hard block at Hazardous/Unsurvivable (<45), soft warning at Challenging (45–69)
+  if(surv < 45){
+    // HARD BLOCK
+    const survCat=surv>=20?'Hazardous':'Unsurvivable';
+    const survColor=surv>=20?'#ff6b35':'#ff2d55';
+    const gap=45-surv;
+    document.getElementById('modal-top-bar').style.background=survColor;
+    document.getElementById('deploy-modal-inner').style.border='1px solid '+survColor;
+    document.getElementById('modal-icon').textContent='🚫';
+    document.getElementById('modal-icon').style.animation='alertFlash 1s infinite';
+    document.getElementById('modal-header-label').textContent='Mission Control — Deployment Rejected';
+    document.getElementById('modal-header-label').style.color=survColor;
+    document.getElementById('modal-header-title').textContent='Planet Not Viable';
+    document.getElementById('modal-surv-score').textContent=surv+'/100';
+    document.getElementById('modal-surv-score').style.color=survColor;
+    document.getElementById('modal-surv-cat').textContent=survCat;
+    document.getElementById('modal-surv-cat').style.color=survColor;
+    document.getElementById('modal-body-text').innerHTML='Mission Control requires a minimum survivability of <span style="font-family:var(--mono);color:#00e5ff;font-weight:bold">45/100 (Challenging)</span> before authorizing colony deployment.';
+    document.getElementById('modal-gap-text').style.color='#ff6b35';
+    document.getElementById('modal-gap-text').textContent='You need '+gap+' more point'+(gap===1?'':'s')+' to reach the minimum. Adjust your planet\'s conditions and try again.';
+    document.getElementById('modal-buttons').innerHTML=
+      '<button onclick="closeModal()" style="width:100%;padding:12px;font-family:var(--mono);font-size:clamp(9px,.82vw,12px);letter-spacing:2px;text-transform:uppercase;background:transparent;border:1px solid #00e5ff;color:#00e5ff;cursor:pointer;border-radius:3px;transition:all .2s" onmouseover="this.style.background=\'rgba(0,229,255,.12)\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'#00e5ff\'">← Return to Simulation — Reconfigure Planet</button>';
+    document.getElementById('deploy-modal').style.display='flex';
+
+  } else if(surv < 70){
+    // SOFT WARNING — Challenging
+    const gain=70-surv;
+    document.getElementById('modal-top-bar').style.background='#ff6b35';
+    document.getElementById('deploy-modal-inner').style.border='1px solid #ff6b35';
+    document.getElementById('modal-icon').textContent='⚠';
+    document.getElementById('modal-icon').style.animation='none';
+    document.getElementById('modal-header-label').textContent='Mission Control — Deployment Advisory';
+    document.getElementById('modal-header-label').style.color='#ff6b35';
+    document.getElementById('modal-header-title').textContent='Challenging Planet Conditions';
+    document.getElementById('modal-surv-score').textContent=surv+'/100';
+    document.getElementById('modal-surv-score').style.color='#ff6b35';
+    document.getElementById('modal-surv-cat').textContent='Challenging';
+    document.getElementById('modal-surv-cat').style.color='#ff6b35';
+    document.getElementById('modal-body-text').textContent='This planet is deployable but will require significant engineering solutions. Your colony design brief will include demanding construction requirements.';
+    document.getElementById('modal-gap-text').style.color='#a8d8ea';
+    document.getElementById('modal-gap-text').textContent=gain+' more point'+(gain===1?'':'s')+' would reach Favorable — and a simpler colony to build.';
+    document.getElementById('modal-buttons').innerHTML=
+      '<button onclick="closeModal()" style="flex:1;padding:12px;font-family:var(--mono);font-size:clamp(9px,.82vw,12px);letter-spacing:2px;text-transform:uppercase;background:transparent;border:1px solid #0a2a40;color:#4a7a90;cursor:pointer;border-radius:3px;transition:all .2s" onmouseover="this.style.borderColor=\'#00e5ff\';this.style.color=\'#00e5ff\'" onmouseout="this.style.borderColor=\'#0a2a40\';this.style.color=\'#4a7a90\'">← Keep Optimizing</button>'
+      +'<button onclick="closeModal();proceedDeploy()" style="flex:1;padding:12px;font-family:var(--mono);font-size:clamp(9px,.82vw,12px);letter-spacing:2px;text-transform:uppercase;background:rgba(255,107,53,.1);border:1px solid #ff6b35;color:#ff6b35;cursor:pointer;border-radius:3px;transition:all .2s" onmouseover="this.style.background=\'rgba(255,107,53,.22)\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'rgba(255,107,53,.1)\';this.style.color=\'#ff6b35\'">Deploy Anyway →</button>';
+    document.getElementById('deploy-modal').style.display='flex';
+
+  } else {
+    proceedDeploy();
+  }
+}
+
+function closeModal(){
+  document.getElementById('deploy-modal').style.display='none';
+}
+
+function proceedDeploy(){
+  buildPage5(P5);
+  goTo(5);
+}
+
+function buildPage5(d){
+  const {temp,tempF,gC,pres,rad,ws,wp,breathScore,surv,diff2,star,dist,atm,mag} = d;
+
+  // Star labels
+  const starLabel={cool:'Cool (K/M-type)',sun:'Medium (G-type)',hot:'Hot (A/F-type)'}[star];
+  const atmLabel={O2:'O₂-Rich',CO2:'CO₂-Rich',CH4:'CH₄-Rich',SO2:'SO₂-Rich'}[atm];
+  const breathLabel=breathScore>=80?'Breathable':breathScore>=20?'Toxic':'Lethal';
+  const breathColor=breathScore>=80?'#00ff9d':breathScore>=20?'#ff6b35':'#ff2d55';
+  const tC=temp<-50?'#ff2d55':temp<0?'#6ab4ff':temp<=50?'#00ff9d':temp<=100?'#ff6b35':'#ff2d55';
+  const gCl=gC<3?'#ff6b35':gC<7?'#00e5ff':gC<=12?'#00ff9d':gC<=15?'#00e5ff':'#ff6b35';
+  const pC=pres<0.35?'#ff6b35':pres<0.7?'#00e5ff':pres<=1.5?'#00ff9d':pres<=2.5?'#00e5ff':'#ff6b35';
+  const rC=rad<=15?'#00ff9d':rad<=25?'#00e5ff':rad<=60?'#ff6b35':'#ff2d55';
+  const wC=wp===0?'#ff2d55':wp<20?'#ff6b35':wp<=70?'#00ff9d':'#00e5ff';
+  const survC=surv>=85?'#00ff9d':surv>=70?'#00e5ff':surv>=45?'#6ab4ff':surv>=20?'#ff6b35':'#ff2d55';
+  const survCatLabel=surv>=85?'Optimal':surv>=70?'Favorable':surv>=45?'Challenging':surv>=20?'Hazardous':'Unsurvivable';
+  const watAvail=wp===0?'None':wp<10?'Trace':wp<20?'Scarce':wp<=70?'Moderate–Abundant':'Excess';
+  const diffVal = diff2||0;
+  const diffC=diffVal<=25?'#00ff9d':diffVal<=50?'#00e5ff':diffVal<=75?'#ff6b35':'#ff2d55';
+  const diffCatLabel=diffVal<=25?'Easy':diffVal<=50?'Moderate':diffVal<=75?'Difficult':'Extreme';
+
+  const stats=[
+    {label:'Surface Temperature',val:tempF+'°F',color:tC},
+    {label:'Gravity',val:gC.toFixed(1)+' m/s²',color:gCl},
+    {label:'Atmospheric Pressure',val:pres.toFixed(2)+' atm',color:pC},
+    {label:'Radiation Risk',val:rad+'/100',color:rC},
+    {label:'Breathability',val:breathLabel,color:breathColor},
+    {label:'Water Availability',val:watAvail,color:wC},
+    {label:'Atmosphere',val:atmLabel,color:'#00e5ff'},
+    {label:'Star / Distance',val:starLabel+' · '+dist+' AU',color:'#a8d8ea'},
+    {label:'Human Survivability',val:surv+'/100 — '+survCatLabel,color:survC},
+    {label:'Colony Difficulty',val:diffVal+'/100 — '+diffCatLabel,color:diffC},
+  ];
+
+  // Split stats: first 8 are environmental, last 2 are mission scores
+  const envStats = stats.slice(0,8);
+  const missionStats = stats.slice(8);
+
+  document.getElementById('p5-stats').innerHTML =
+    '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px">'
+    + envStats.map(s=>`
+      <div style="padding:10px 12px;background:rgba(0,0,0,.35);border:1px solid #0a2a40;border-radius:3px;border-left:2px solid ${s.color};min-width:0">
+        <div style="font-size:clamp(8px,.68vw,9px);letter-spacing:2px;color:#4a7a90;text-transform:uppercase;font-family:var(--mono);margin-bottom:5px;line-height:1.4">${s.label}</div>
+        <div style="font-size:clamp(12px,1vw,15px);color:${s.color};font-family:var(--mono);font-weight:bold;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.val}</div>
+      </div>`).join('')
+    + '</div>'
+    + '<div style="display:flex;flex-direction:column;gap:8px;border-top:1px solid rgba(0,229,255,.1);padding-top:10px">'
+    + missionStats.map(s=>`
+      <div style="padding:12px 16px;background:rgba(0,0,0,.5);border:1px solid ${s.color}33;border-radius:3px;border-left:3px solid ${s.color};display:flex;align-items:center;justify-content:space-between;gap:16px">
+        <div style="font-size:clamp(9px,.75vw,11px);letter-spacing:2px;color:#4a7a90;text-transform:uppercase;font-family:var(--mono);white-space:nowrap">${s.label}</div>
+        <div style="font-size:clamp(14px,1.15vw,18px);color:${s.color};font-family:var(--mono);font-weight:bold;white-space:nowrap">${s.val}</div>
+      </div>`).join('')
+    + '</div>';
+
+  const conditions = getColonyConditions(S, d);
+  document.getElementById('p5-ncond').textContent = conditions.length;
+
+  const catColors={Atmospheric:'#00e5ff',Radiation:'#ff2d55',Thermal:'#ff6b35',Water:'#00e5ff',Gravity:'#ff6b35',Energy:'#00ff9d',Special:'#a855f7'};
+
+  document.getElementById('p5-conditions').innerHTML = conditions.map((c,i)=>`
+    <div style="background:rgba(4,15,30,.9);border:1px solid ${catColors[c.cat]||'#0a2a40'};border-radius:5px;padding:20px;display:flex;flex-direction:column;gap:12px;position:relative;overflow:hidden">
+      <div style="position:absolute;top:0;left:0;right:0;height:3px;background:${catColors[c.cat]||'#00e5ff'}"></div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:28px">${c.icon}</span>
+        <div>
+          <div style="font-size:clamp(8px,.68vw,9px);letter-spacing:3px;color:${catColors[c.cat]||'#00e5ff'};text-transform:uppercase;font-family:var(--mono)"">Condition ${c.num} · ${c.cat}</div>
+          <div style="font-size:clamp(14px,1.15vw,18px);color:#fff;font-family:var(--mono);letter-spacing:1px;margin-top:3px">${c.title}</div>
+        </div>
+      </div>
+      <div style="font-size:clamp(12px,.9vw,14px);color:#c8e0ee;font-family:var(--sans);line-height:1.75">${c.desc}</div>
+      <div style="border-top:1px solid rgba(255,255,255,.06);padding-top:10px">
+        <div style="font-size:clamp(8px,.65vw,9px);letter-spacing:2px;color:#4a7a90;text-transform:uppercase;font-family:var(--mono);margin-bottom:8px">Must include in your model:</div>
+        ${c.items.map(item=>`<div style="font-size:clamp(11px,.82vw,13px);color:#a8d8ea;font-family:var(--sans);padding:4px 0 4px 12px;border-left:2px solid ${catColors[c.cat]||'#00e5ff'}44;margin-bottom:4px;line-height:1.5">→ ${item}</div>`).join('')}
+      </div>
+    </div>`).join('');
+
+  // Draw planet visual on Page 5
+  drawP5Planet(d);
+  initP5Starfield();
+}
+
+function drawP5Planet(d){
+  const {temp,gC,pres,rad,ws,wp,ghFeedback} = d;
+  const cv=document.getElementById('p5-planet');
+  const sz=140;
+  cv.width=sz;cv.height=sz;
+  const ctx=cv.getContext('2d'),cx=sz/2,cy=sz/2,r=sz*0.4;
+  ctx.clearRect(0,0,sz,sz);
+  // Base planet color — same logic as main sim
+  let bR,bG,bB;
+  if(temp<-100){bR=160;bG=195;bB=240;}else if(temp<0){bR=100;bG=140;bB=190;}else if(temp<50){bR=45;bG=110;bB=75;}else if(temp<150){bR=170;bG=95;bB=25;}else{bR=210;bG=45;bB=15;}
+  for(let i=30;i>=0;i--){const t=i/30;ctx.beginPath();ctx.arc(cx-r*.12*(1-t),cy,r*t,0,Math.PI*2);ctx.fillStyle='rgb('+Math.round(bR*(.45+.55*t))+','+Math.round(bG*(.45+.55*t))+','+Math.round(bB*(.45+.55*t))+')';ctx.fill();}
+  // Ice caps
+  if(temp<-20){ctx.save();ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.clip();const cs=Math.min(.85,(-temp/200)*.75+.1);ctx.fillStyle=temp<-100?'rgba(200,225,255,.95)':'rgba(215,235,255,.75)';ctx.fillRect(cx-r,cy-r,r*2,r*cs*1.6);ctx.fillRect(cx-r,cy+r-r*cs*1.6,r*2,r*cs*1.6);ctx.restore();}
+  // Ocean
+  if(wp>10&&ws==='Liquid'){ctx.save();ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.clip();const wh=r*(wp/100)*1.3;ctx.fillStyle='rgba(0,70,150,.45)';ctx.fillRect(cx-r,cy+r-wh,r*2,wh);ctx.strokeStyle='rgba(0,140,210,.3)';ctx.lineWidth=1.2;for(let i=0;i<3;i++){ctx.beginPath();for(let x=-r;x<=r;x+=4){const y=cy+r-wh+(i*8)+Math.sin(x*.2+i)*2.5;x===-r?ctx.moveTo(cx+x,y):ctx.lineTo(cx+x,y);}ctx.stroke();}ctx.restore();}
+  // Clouds
+  if(pres>.3&&S.atm!=='SO2'){ctx.save();ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.clip();ctx.fillStyle='rgba(255,255,255,'+(Math.min(.55,pres/5)*.4)+')';[[cx-r*.2,cy-r*.24,r*.38,r*.12],[cx+r*.16,cy+r*.16,r*.5,r*.11],[cx-r*.38,cy+r*.29,r*.33,r*.1],[cx+r*.24,cy-r*.38,r*.42,r*.12]].forEach(a=>{ctx.beginPath();ctx.ellipse(a[0],a[1],a[2],a[3],0,0,Math.PI*2);ctx.fill();});ctx.restore();}
+  // SO₂ acid clouds
+  if(S.atm==='SO2'){ctx.save();ctx.beginPath();ctx.arc(cx,cy,r*1.1,0,Math.PI*2);ctx.clip();const hg=ctx.createRadialGradient(cx,cy,r*.9,cx,cy,r*1.1);hg.addColorStop(0,'rgba(200,160,0,0)');hg.addColorStop(.4,'rgba(200,140,0,.22)');hg.addColorStop(1,'rgba(180,100,0,.6)');ctx.fillStyle=hg;ctx.beginPath();ctx.arc(cx,cy,r*1.1,0,Math.PI*2);ctx.fill();ctx.restore();}
+  // Hot glow
+  if(temp>100){const hg=ctx.createRadialGradient(cx,cy,r,cx,cy,r*1.25);hg.addColorStop(0,'rgba(255,'+(temp>200?20:90)+',0,.45)');hg.addColorStop(1,'rgba(255,70,0,0)');ctx.fillStyle=hg;ctx.beginPath();ctx.arc(cx,cy,r*1.25,0,Math.PI*2);ctx.fill();}
+  // CO₂ greenhouse glow
+  if(S.atm==='CO2'&&ghFeedback>5){const gi=Math.min(1,ghFeedback/150);const gg=ctx.createRadialGradient(cx,cy,r*.85,cx,cy,r*1.3);gg.addColorStop(0,`rgba(255,${Math.round(120-gi*100)},0,${gi*.4})`);gg.addColorStop(1,'rgba(255,40,0,0)');ctx.fillStyle=gg;ctx.beginPath();ctx.arc(cx,cy,r*1.3,0,Math.PI*2);ctx.fill();}
+  // Atmosphere ring
+  if(pres>.05){const ac={O2:'rgba(110,170,255,.22)',CO2:'rgba(255,150,50,.28)',CH4:'rgba(170,110,255,.22)',SO2:'rgba(200,140,0,.28)'}[S.atm];const rg=ctx.createRadialGradient(cx,cy,r,cx,cy,r*1.19);rg.addColorStop(0,ac);rg.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=rg;ctx.beginPath();ctx.arc(cx,cy,r*1.19,0,Math.PI*2);ctx.fill();}
+  // Aurora
+  if(S.mag>80){ctx.save();ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.clip();ctx.strokeStyle='rgba(0,255,157,'+((S.mag-80)/200*.4)+')';ctx.lineWidth=1.5;for(let i=0;i<4;i++){ctx.beginPath();ctx.moveTo(cx-r+i*r*.22,cy+r*.55);ctx.bezierCurveTo(cx-r*.32+i*r*.2,cy,cx+i*r*.2,cy-r*.75,cx+r*.2+i*r*.22,cy-r);ctx.stroke();}ctx.restore();}
+  // Radiation warning
+  if(rad>75){ctx.save();ctx.globalAlpha=.2;ctx.fillStyle='#ff0044';ctx.font='bold '+Math.round(r*.25)+'px monospace';ctx.textAlign='center';ctx.fillText('\u2622',cx,cy+r*.1);ctx.restore();}
+  // Planet border
+  ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.strokeStyle='rgba(0,229,255,.28)';ctx.lineWidth=1.5;ctx.stroke();
+  // Shadow
+  ctx.save();const sg=ctx.createRadialGradient(cx-r*.25,cy,r*.1,cx+r*.55,cy,r*1.35);sg.addColorStop(0,'rgba(0,0,0,0)');sg.addColorStop(.55,'rgba(0,0,0,0)');sg.addColorStop(.75,'rgba(0,0,0,.28)');sg.addColorStop(1,'rgba(0,0,0,.68)');ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.clip();ctx.fillStyle=sg;ctx.fillRect(0,0,sz,sz);ctx.restore();
+  // Highlight
+  ctx.save();ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.clip();const hl=ctx.createRadialGradient(cx-r*.38,cy-r*.38,2,cx-r*.28,cy-r*.28,r*.5);hl.addColorStop(0,'rgba(255,255,255,.22)');hl.addColorStop(1,'rgba(255,255,255,0)');ctx.fillStyle=hl;ctx.fillRect(0,0,sz,sz);ctx.restore();
+  // Orbit rings
+  const os=r*2+30;
+  document.getElementById('p5-orbit1').style.cssText='width:'+os+'px;height:'+os+'px';
+  document.getElementById('p5-orbit2').style.cssText='width:'+(os+40)+'px;height:'+(os+40)+'px;animation-delay:.8s';
+  // Gentle rotation animation
+  let p5rot=0;
+  (function rotP5(){
+    p5rot+=.025;
+    const el=document.getElementById('p5-planet');
+    if(el&&el.closest('#p5').classList.contains('active'))el.style.transform='rotate('+p5rot+'deg)';
+    if(el&&el.closest('#p5').classList.contains('active'))requestAnimationFrame(rotP5);
+  })();
+}
+
+function initP5Starfield(){
+  const cv=document.getElementById('p5-starfield');
+  cv.width=180;cv.height=180;
+  const ctx=cv.getContext('2d');
+  ctx.fillStyle='#020d1a';ctx.fillRect(0,0,180,180);
+  const stars=Array.from({length:60},()=>({x:Math.random()*180,y:Math.random()*180,r:Math.random()*.9+.15,t:Math.random()*Math.PI*2,sp:Math.random()*.06+.01}));
+  (function a(){
+    ctx.fillStyle='rgba(2,13,26,.25)';ctx.fillRect(0,0,180,180);
+    stars.forEach(s=>{s.t+=s.sp*.03;ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fillStyle='rgba(180,220,255,'+(.15+.35*Math.abs(Math.sin(s.t)))+')';ctx.fill();});
+    const el=document.getElementById('p5-starfield');
+    if(el&&el.closest('#p5').classList.contains('active'))requestAnimationFrame(a);
+  })();
+}
+
+function downloadBrief(){
+  const d=P5;
+  const conditions=getColonyConditions(S,d);
+  const atmLabel={O2:'O\u2082-Rich',CO2:'CO\u2082-Rich',CH4:'CH\u2084-Rich',SO2:'SO\u2082-Rich'}[S.atm];
+  const starLabel={cool:'Cool (K/M-type)',sun:'Medium (G-type)',hot:'Hot (A/F-type)'}[S.star];
+  const breathLabel=d.breathScore>=80?'Breathable':d.breathScore>=20?'Toxic':'Lethal';
+  const watAvail=d.wp===0?'None':d.wp<10?'Trace':d.wp<20?'Scarce':d.wp<=70?'Moderate\u2013Abundant':'Excess';
+  const survCat=d.surv>=85?'Optimal':d.surv>=70?'Favorable':d.surv>=45?'Challenging':d.surv>=20?'Hazardous':'Unsurvivable';
+  const diffVal=d.diff2||0;
+  const diffCat=diffVal<=25?'Easy':diffVal<=50?'Moderate':diffVal<=75?'Difficult':'Extreme';
+
+  // Render planet to offscreen canvas and export as base64 PNG
+  const offscreen=document.createElement('canvas');
+  offscreen.width=200;offscreen.height=200;
+  const ctx=offscreen.getContext('2d');
+  const sz=200,cx=sz/2,cy=sz/2,r=sz*0.38;
+  const {temp,gC,pres,rad,ws,wp,ghFeedback}=d;
+  ctx.fillStyle='#020d1a';ctx.fillRect(0,0,sz,sz);
+  for(let i=0;i<50;i++){ctx.beginPath();ctx.arc(Math.random()*sz,Math.random()*sz,Math.random()*.9+.2,0,Math.PI*2);ctx.fillStyle='rgba(180,220,255,'+(Math.random()*.35+.1)+')';ctx.fill();}
+  let bR,bG,bB;
+  if(temp<-100){bR=160;bG=195;bB=240;}else if(temp<0){bR=100;bG=140;bB=190;}else if(temp<50){bR=45;bG=110;bB=75;}else if(temp<150){bR=170;bG=95;bB=25;}else{bR=210;bG=45;bB=15;}
+  for(let i=30;i>=0;i--){const t=i/30;ctx.beginPath();ctx.arc(cx-r*.12*(1-t),cy,r*t,0,Math.PI*2);ctx.fillStyle='rgb('+Math.round(bR*(.45+.55*t))+','+Math.round(bG*(.45+.55*t))+','+Math.round(bB*(.45+.55*t))+')';ctx.fill();}
+  if(temp<-20){ctx.save();ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.clip();const cs=Math.min(.85,(-temp/200)*.75+.1);ctx.fillStyle=temp<-100?'rgba(200,225,255,.95)':'rgba(215,235,255,.75)';ctx.fillRect(cx-r,cy-r,r*2,r*cs*1.6);ctx.fillRect(cx-r,cy+r-r*cs*1.6,r*2,r*cs*1.6);ctx.restore();}
+  if(wp>10&&ws==='Liquid'){ctx.save();ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.clip();const wh=r*(wp/100)*1.3;ctx.fillStyle='rgba(0,70,150,.45)';ctx.fillRect(cx-r,cy+r-wh,r*2,wh);ctx.strokeStyle='rgba(0,140,210,.3)';ctx.lineWidth=1.5;for(let i=0;i<3;i++){ctx.beginPath();for(let x=-r;x<=r;x+=5){const y=cy+r-wh+(i*9)+Math.sin(x*.2+i)*3;x===-r?ctx.moveTo(cx+x,y):ctx.lineTo(cx+x,y);}ctx.stroke();}ctx.restore();}
+  if(pres>.3&&S.atm!=='SO2'){ctx.save();ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.clip();ctx.fillStyle='rgba(255,255,255,'+(Math.min(.55,pres/5)*.4)+')';[[cx-r*.2,cy-r*.24,r*.38,r*.12],[cx+r*.16,cy+r*.16,r*.5,r*.11],[cx-r*.38,cy+r*.29,r*.33,r*.1],[cx+r*.24,cy-r*.38,r*.42,r*.12]].forEach(a=>{ctx.beginPath();ctx.ellipse(a[0],a[1],a[2],a[3],0,0,Math.PI*2);ctx.fill();});ctx.restore();}
+  if(S.atm==='SO2'){ctx.save();ctx.beginPath();ctx.arc(cx,cy,r*1.1,0,Math.PI*2);ctx.clip();const hg=ctx.createRadialGradient(cx,cy,r*.9,cx,cy,r*1.1);hg.addColorStop(0,'rgba(200,160,0,0)');hg.addColorStop(.4,'rgba(200,140,0,.22)');hg.addColorStop(1,'rgba(180,100,0,.6)');ctx.fillStyle=hg;ctx.beginPath();ctx.arc(cx,cy,r*1.1,0,Math.PI*2);ctx.fill();ctx.restore();}
+  if(temp>100){const hg=ctx.createRadialGradient(cx,cy,r,cx,cy,r*1.25);hg.addColorStop(0,'rgba(255,'+(temp>200?20:90)+',0,.45)');hg.addColorStop(1,'rgba(255,70,0,0)');ctx.fillStyle=hg;ctx.beginPath();ctx.arc(cx,cy,r*1.25,0,Math.PI*2);ctx.fill();}
+  if(S.atm==='CO2'&&ghFeedback>5){const gi=Math.min(1,ghFeedback/150);const gg=ctx.createRadialGradient(cx,cy,r*.85,cx,cy,r*1.3);gg.addColorStop(0,'rgba(255,'+Math.round(120-gi*100)+',0,'+gi*.4+')');gg.addColorStop(1,'rgba(255,40,0,0)');ctx.fillStyle=gg;ctx.beginPath();ctx.arc(cx,cy,r*1.3,0,Math.PI*2);ctx.fill();}
+  if(pres>.05){const ac={O2:'rgba(110,170,255,.22)',CO2:'rgba(255,150,50,.28)',CH4:'rgba(170,110,255,.22)',SO2:'rgba(200,140,0,.28)'}[S.atm];const rg=ctx.createRadialGradient(cx,cy,r,cx,cy,r*1.19);rg.addColorStop(0,ac);rg.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=rg;ctx.beginPath();ctx.arc(cx,cy,r*1.19,0,Math.PI*2);ctx.fill();}
+  if(S.mag>80){ctx.save();ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.clip();ctx.strokeStyle='rgba(0,255,157,'+((S.mag-80)/200*.4)+')';ctx.lineWidth=2;for(let i=0;i<4;i++){ctx.beginPath();ctx.moveTo(cx-r+i*r*.22,cy+r*.55);ctx.bezierCurveTo(cx-r*.32+i*r*.2,cy,cx+i*r*.2,cy-r*.75,cx+r*.2+i*r*.22,cy-r);ctx.stroke();}ctx.restore();}
+  if(rad>75){ctx.save();ctx.globalAlpha=.2;ctx.fillStyle='#ff0044';ctx.font='bold '+Math.round(r*.25)+'px monospace';ctx.textAlign='center';ctx.fillText('\u2622',cx,cy+r*.1);ctx.restore();}
+  ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.strokeStyle='rgba(0,229,255,.4)';ctx.lineWidth=1.5;ctx.stroke();
+  ctx.save();const sg=ctx.createRadialGradient(cx-r*.25,cy,r*.1,cx+r*.55,cy,r*1.35);sg.addColorStop(0,'rgba(0,0,0,0)');sg.addColorStop(.55,'rgba(0,0,0,0)');sg.addColorStop(.75,'rgba(0,0,0,.28)');sg.addColorStop(1,'rgba(0,0,0,.68)');ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.clip();ctx.fillStyle=sg;ctx.fillRect(0,0,sz,sz);ctx.restore();
+  ctx.save();ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.clip();const hl=ctx.createRadialGradient(cx-r*.38,cy-r*.38,2,cx-r*.28,cy-r*.28,r*.5);hl.addColorStop(0,'rgba(255,255,255,.22)');hl.addColorStop(1,'rgba(255,255,255,0)');ctx.fillStyle=hl;ctx.fillRect(0,0,sz,sz);ctx.restore();
+  const planetImg=offscreen.toDataURL('image/png');
+
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Colony Deployment Brief</title>
+  <style>
+    body{font-family:'Courier New',monospace;background:#fff;color:#111;max-width:820px;margin:0 auto;padding:32px;font-size:13px}
+    h1{font-size:20px;letter-spacing:4px;text-transform:uppercase;border-bottom:3px solid #000;padding-bottom:10px;margin-bottom:6px}
+    h2{font-size:12px;letter-spacing:3px;text-transform:uppercase;color:#555;margin:0 0 16px}
+    .top-row{display:flex;gap:24px;align-items:flex-start;margin-bottom:20px}
+    .planet-block{flex-shrink:0;text-align:center}
+    .planet-block img{width:160px;height:160px;border-radius:4px;display:block}
+    .stats-block{flex:1}
+    .stats{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+    .stat{border:1px solid #ccc;padding:7px 10px;border-left:3px solid #000}
+    .stat-label{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#888;margin-bottom:3px}
+    .stat-val{font-size:13px;font-weight:bold}
+    .divider{border:none;border-top:2px solid #000;margin:18px 0 14px}
+    .mission-scores{display:grid;grid-template-columns:1fr 1fr;gap:7px;border-top:2px solid #000;padding-top:10px;margin-top:10px}
+    .mscore{border:1px solid #000;border-left:4px solid #000;padding:10px 12px}
+    .cond{border:1px solid #000;border-left:4px solid #000;padding:16px;margin-bottom:14px;break-inside:avoid}
+    .cond-header{font-size:10px;letter-spacing:3px;text-transform:uppercase;color:#555;margin-bottom:4px}
+    .cond-title{font-size:16px;font-weight:bold;margin-bottom:8px}
+    .cond-desc{font-size:13px;line-height:1.75;margin-bottom:12px;color:#222;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif}
+    .items-label{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#888;margin-bottom:6px}
+    .cond-item{font-size:12px;padding:3px 0 3px 12px;border-left:2px solid #ccc;margin-bottom:3px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;line-height:1.5}
+    .footer{border-top:1px solid #ccc;padding-top:12px;font-size:11px;color:#888;margin-top:24px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif}
+    @media print{body{padding:16px}}
+  </style></head><body>
+  <h1>Colony Deployment Brief</h1>
+  <h2>Exoplanet Habitability Mission Control</h2>
+  <div class="top-row">
+    <div class="planet-block">
+      <img src="${planetImg}" alt="Planet Visual">
+    </div>
+    <div class="stats-block">
+      <div class="stats">
+        <div class="stat"><div class="stat-label">Surface Temperature</div><div class="stat-val">${d.tempF}&deg;F</div></div>
+        <div class="stat"><div class="stat-label">Surface Gravity</div><div class="stat-val">${d.gC.toFixed(1)} m/s&sup2;</div></div>
+        <div class="stat"><div class="stat-label">Atmospheric Pressure</div><div class="stat-val">${d.pres.toFixed(2)} atm</div></div>
+        <div class="stat"><div class="stat-label">Radiation Risk</div><div class="stat-val">${d.rad}/100</div></div>
+        <div class="stat"><div class="stat-label">Breathability</div><div class="stat-val">${breathLabel}</div></div>
+        <div class="stat"><div class="stat-label">Water Availability</div><div class="stat-val">${watAvail}</div></div>
+        <div class="stat"><div class="stat-label">Atmosphere</div><div class="stat-val">${atmLabel}</div></div>
+        <div class="stat"><div class="stat-label">Star / Distance</div><div class="stat-val">${starLabel} &middot; ${S.dist} AU</div></div>
+      </div>
+      <div class="mission-scores">
+        <div class="mscore"><div class="stat-label">Human Survivability</div><div class="stat-val">${d.surv}/100 &mdash; ${survCat}</div></div>
+        <div class="mscore"><div class="stat-label">Colony Difficulty</div><div class="stat-val">${diffVal}/100 &mdash; ${diffCat}</div></div>
+      </div>
+    </div>
+  </div>
+  <hr class="divider">
+  <h2>Colony Design Conditions</h2>
+  ${conditions.map(c=>`
+  <div class="cond">
+    <div class="cond-header">Condition ${c.num} &middot; ${c.cat}</div>
+    <div class="cond-title">${c.icon} ${c.title}</div>
+    <div class="cond-desc">${c.desc}</div>
+    <div class="items-label">Must include in your model:</div>
+    ${c.items.map(item=>`<div class="cond-item">&rarr; ${item}</div>`).join('')}
+  </div>`).join('')}
+  <div class="footer">Generated by Exoplanet Habitability Mission Control</div>
+  </body></html>`;
+
+  const blob=new Blob([html],{type:'text/html'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='colony_deployment_brief.html';
+  a.click();
+}
+
+</script>
+</body>
+</html>
